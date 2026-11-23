@@ -1,0 +1,250 @@
+:root {
+  font:
+    16px Inter,
+    "Segoe UI",
+    sans-serif;
+  color: #1e3331;
+  background: #f5f6f2;
+  --ink: #254c42;
+  --line: #d6ddd5;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: #173e34;
+  color: #fff;
+  padding: 0 max(4vw, 20px);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+}
+.logo {
+  position: relative;
+  height: 35px;
+  width: 32px;
+  color: #d1e8ad;
+  font: 32px/26px Georgia;
+}
+.logo i,
+.logo b {
+  position: absolute;
+  left: 0;
+  top: 5px;
+  font: inherit;
+}
+.logo b {
+  top: 10px;
+}
+.header-note {
+  font-size: 13px;
+  border-left: 1px solid #587367;
+  padding-left: 24px;
+  color: #d3ded5;
+}
+main {
+  max-width: 1600px;
+  margin: auto;
+  padding: 32px max(4vw, 20px) 20px;
+}
+.intro,
+.panel-head,
+.foot,
+.nav-head,
+.details,
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 1.25px;
+  text-transform: uppercase;
+  color: #577064;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 510;
+  letter-spacing: -0.055em;
+}
+h1 {
+  font-size: clamp(32px, 4vw, 55px);
+  font-family: Georgia, serif;
+}
+h2 {
+  font: 500 clamp(25px, 2.4vw, 34px) Georgia, serif;
+}
+h3 { font-size: 19px; }
+.datasets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 48px);
+  margin-top: 28px;
+}
+.datasets article { min-width: 0; }
+section {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.panel-head,
+.foot {
+  padding: 14px 18px;
+}
+.foot,
+.details,
+footer,
+[data-ui="status"] {
+  font-size: 13px;
+  color: #52675d;
+}
+[data-ui="status"] {
+  margin: 6px 0 16px;
+}
+button,
+select {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid #cbd5cd;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 7px 11px;
+}
+button {
+  cursor: pointer;
+}
+button:hover,
+select:hover {
+  background: #eff4ee;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tools {
+  display: flex;
+  gap: 4px;
+}
+.tools button {
+  min-width: 30px;
+  padding: 4px 8px;
+}
+[data-ui="slide"],
+[data-ui="volume"] {
+  height: clamp(240px, 31vh, 380px);
+  position: relative;
+  overflow: hidden;
+}
+[data-ui="slide"] {
+  background: #efeeea;
+}
+[data-ui="osd"] {
+  height: 100%;
+}
+[data-ui="cross"] {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 1px #fff);
+}
+[data-ui="cross"]:before,
+[data-ui="cross"]:after {
+  content: "";
+  position: absolute;
+  background: #007d6f;
+}
+[data-ui="cross"]:before {
+  top: 10px;
+  width: 100%;
+  height: 2px;
+}
+[data-ui="cross"]:after {
+  left: 10px;
+  height: 100%;
+  width: 2px;
+}
+[data-ui="volume"] {
+  background: radial-gradient(ellipse at 50% 45%, #31403c, #182824);
+  color: #e7eee4;
+  display: grid;
+  place-items: center;
+}
+[data-ui="volume"] canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.navigation {
+  margin: 12px 0;
+  padding: 17px 20px;
+}
+.range {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 13px 0;
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: #28694f;
+}
+output,
+.details {
+  font-family: "Cascadia Mono", monospace;
+  font-size: 12px;
+}
+footer {
+  align-items: baseline;
+  padding: 14px 0;
+  gap: 16px;
+  font-size: 12px;
+}
+article footer { overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .datasets {
+    grid-template-columns: 1fr;
+  }
+  .intro {
+    align-items: start;
+    flex-direction: column;
+  }
+  main {
+    padding-top: 22px;
+  }
+  .header-note {
+    font-size: 11px;
+  }
+  .details,
+  footer {
+    align-items: start;
+    flex-direction: column;
+  }
+  [data-ui="slide"],
+  [data-ui="volume"] {
+    height: 320px;
+  }
+}
