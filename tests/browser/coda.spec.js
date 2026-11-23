@@ -23,6 +23,14 @@ test("locally generated CODA trace maps the distal section to the native slide",
   }, {section, x, y, width:manifest.dimensions[0]});
   await expect(readout).toContainText("X "+position[0]+", Y "+position[1]);
   await expect(page.locator("#z-value")).toHaveText("39");
+  const graph = await request.get("/data/coda-lung/connections.json");
+  if (graph.headers()["content-type"]?.includes("application/json")) {
+    await page.locator("#connection-interval").selectOption("18");
+    await expect(page.locator("#connection-sampling")).toContainText("undistributed section 038");
+    await expect(page.locator("#connection-flanks canvas")).toHaveCount(2);
+    await expect(page.locator("#connection-flanks")).toContainText("NDPI level-zero pixel edges");
+    await expect(page.locator('#connection-flags [data-flag="verified_identity"]')).toHaveCount(0);
+  }
 });
 
 test("absent local-only data clears the previous selection and preserves review status", async ({ page }) => {
