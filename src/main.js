@@ -1,5 +1,5 @@
 import { pullAt } from "./coordinates.js";
-﻿import OpenSeadragon from "openseadragon";
+import OpenSeadragon from "openseadragon";
 import { createVolume } from "./volume.js";
 import "./style.css";
 

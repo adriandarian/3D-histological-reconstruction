@@ -266,7 +266,7 @@ article footer { overflow-wrap: anywhere; }
 .reslices figure { margin: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: white; }
 .reslices figure > div { display: flex; align-items: center; justify-content: center; height: clamp(130px, 16vw, 225px); padding: 6px; background: #21302c; }
 .reslices label, .reslices figcaption { display: block; padding: 8px 12px; }
-.reslices canvas { cursor: crosshair; image-rendering: pixelated; }
+.reslices canvas { object-fit: fill; cursor: crosshair; image-rendering: pixelated; }
 #volume-status { color: #476055; line-height: 1.5; }
 @media(max-width:720px) {
   .volume-layout { grid-template-columns: 1fr; }

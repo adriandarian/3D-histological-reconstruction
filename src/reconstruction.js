@@ -16,6 +16,14 @@ async function resource(url, method, signal) {
   return response[method]();
 }
 
+async function loadRegistration(url, expected, signal) {
+  const bytes = await resource(url, "arrayBuffer", signal);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const hash = Array.from(digest, value => value.toString(16).padStart(2, "0")).join("");
+  if (hash !== expected) throw Error("The slide registration differs from the one used to build the volume. Regenerate the pancreas export.");
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 function renderSettings() {
   const radians = id => +element(id).value * Math.PI / 180;
   const a = radians("azimuth"), e = radians("elevation");
@@ -172,14 +180,17 @@ async function load() {
   try {
     const manifest=await resource(base,"json",signal);
     const asset=(name,method)=>resource(new URL(name,base),method,signal);
-    const [rgbBuffer,labelBuffer,mesh,registration] = await Promise.all([
+    const [rgbBuffer,labelBuffer,mesh,registration,foregroundBuffer] = await Promise.all([
       asset(manifest.rgb,"arrayBuffer"),asset(manifest.labels,"arrayBuffer"),
-      manifest.mesh && asset(manifest.mesh,"json"),real && resource(realBase,"json",signal)
+      manifest.mesh && asset(manifest.mesh,"json"),real ? loadRegistration(realBase,manifest.registrationSha256,signal) : null,
+      manifest.foreground && asset(manifest.foreground,"arrayBuffer")
     ]);
     if(signal.aborted) return;
     const rgb=new Uint8Array(rgbBuffer), labels=new Uint8Array(labelBuffer);
     const {dimensions}=manifest;
     const count=dimensions.reduce((a,b)=>a*b,1);
+    const foreground=foregroundBuffer ? new Uint8Array(foregroundBuffer) : labels;
+    if (foreground.length !== count) throw Error("Inconsistent foreground dimensions");
     if(labels.length!==count || rgb.length!==3*count || (real && registration.sections.length!==dimensions[2]))
       throw Error("Inconsistent reconstruction dimensions");
     // Uncalibrated sections use unitless index coordinates on every axis.
@@ -188,7 +199,7 @@ async function load() {
     const rgba=new Uint8Array(4*count), anatomy=new Uint8Array(count);
     for(let i=0;i<count;i++){
       rgba[i*4]=rgb[i*3]; rgba[i*4+1]=rgb[i*3+1]; rgba[i*4+2]=rgb[i*3+2];
-      rgba[i*4+3]=labels[i] ? 255 : 0;
+      rgba[i*4+3]=foreground[i] ? 255 : 0;
       anatomy[i]=Number(labels[i]===2);
     }
     element("anatomy-name").textContent=manifest.anatomyName || "Branching duct";
