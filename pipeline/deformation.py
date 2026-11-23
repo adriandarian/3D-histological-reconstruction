@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def displacement_grids(images, valid, reference):
+def displacement_grids(images, valid, reference, *, he_channels=None):
     """Fit smooth corrections in the common rigid frame to adjacent optical flow."""
     h, w = images[0].shape
     size = (max(2, round(w / 24) + 1), max(2, round(h / 24) + 1))
@@ -19,8 +19,27 @@ def displacement_grids(images, valid, reference):
     edges = []
     weights = []
 
-    def flow(a, b):
-        return cv2.calcOpticalFlowFarneback(a, b, None, 0.5, 4, 35, 5, 7, 1.5, 0)
+    def observation(forward, backward, i):
+        fx, fy = x + forward[:, :, 0], y + forward[:, :, 1]
+        inverse = cv2.remap(backward, fx, fy, cv2.INTER_LINEAR)
+        mask = valid[i].astype(bool) & (
+            cv2.remap(valid[i + 1], fx, fy, cv2.INTER_NEAREST) > 0
+        )
+        confidence = (
+            np.exp(-np.sum((forward + inverse) ** 2, axis=2) / 16)
+            * mask
+            * (np.linalg.norm(forward, axis=2) < 35)
+        )
+        weighted = grid(cv2.GaussianBlur(forward * confidence[:, :, None], (0, 0), 12))
+        return weighted, grid(cv2.GaussianBlur(confidence, (0, 0), 12))
+
+    def polynomial_flow(a, b, window):
+        return cv2.calcOpticalFlowFarneback(a, b, None, 0.5, 4, window, 5, 7, 1.5, 0)
+
+    # Tiny previews have too little support for the DIS patch pyramid.
+    use_he = he_channels is not None and min(w, h) >= 16
+    if use_he:
+        inverse_search = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 
     for i, (a, b) in enumerate(zip(images, images[1:])):
         overlap = (valid[i] != 0) & (valid[i + 1] != 0)
@@ -28,27 +47,32 @@ def displacement_grids(images, valid, reference):
         if left.size and left.std() > 0 and right.std() > 0:
             if np.corrcoef(left, right)[0, 1] > 0.98:
                 pinned.update((i, i + 1))
-        f = flow(a, b)
-        back = flow(b, a)
-        fx, fy = x + f[:, :, 0], y + f[:, :, 1]
-        inverse = cv2.remap(back, fx, fy, cv2.INTER_LINEAR)
-        mask = valid[i].astype(bool) & (
-            cv2.remap(valid[i + 1], fx, fy, cv2.INTER_NEAREST) > 0
-        )
-        conf = (
-            np.exp(-np.sum((f + inverse) ** 2, axis=2) / 16)
-            * mask
-            * (np.linalg.norm(f, axis=2) < 35)
-        )
-
-        # Suppress inconsistent matches before averaging onto the coarse grid.
-        def smooth(im):
-            return grid(cv2.GaussianBlur(im, (0, 0), 12))
-
-        weight = smooth(conf)
-        edges.append(
-            smooth(f * conf[:, :, None]) / np.maximum(weight[:, :, None], 1e-6)
-        )
+        if use_he:
+            red, green = he_channels
+            red_a, red_b = red[i : i + 2]
+            green_a, green_b = green[i : i + 2]
+            broad, broad_weight = observation(
+                inverse_search.calc(red_a, red_b, None),
+                inverse_search.calc(red_b, red_a, None),
+                i,
+            )
+            fine, fine_weight = observation(
+                polynomial_flow(green_a, green_b, 17),
+                polynomial_flow(green_b, green_a, 17),
+                i,
+            )
+            # Normalize separately so one channel's brightness and confidence
+            # cannot suppress the displacement measured in the other channel.
+            broad /= np.maximum(broad_weight[:, :, None], 1e-6)
+            fine /= np.maximum(fine_weight[:, :, None], 1e-6)
+            edge = (2 * broad + fine) / 3
+            weight = (broad_weight + fine_weight) / 2
+        else:
+            weighted, weight = observation(
+                polynomial_flow(a, b, 35), polynomial_flow(b, a, 35), i
+            )
+            edge = weighted / np.maximum(weight[:, :, None], 1e-6)
+        edges.append(edge)
         weights.append(weight)
     # Pull displacements satisfy g[i+1]-g[i] = flow[i]; penalize departures from rigid.
     n = len(images)

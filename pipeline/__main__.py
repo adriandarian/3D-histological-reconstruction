@@ -223,7 +223,18 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
             warp(im, m, 255).astype(np.uint8) for im, m in zip(gray, transforms)
         ]
         valid_images = [warp(valid_frame, m, 0, cv2.INTER_NEAREST) for m in transforms]
-        grids = displacement_grids(rigid_images, valid_images, mid)
+        he_channels = None
+        if local == "he":
+            he_channels = [
+                [
+                    warp(im[:, :, channel].astype(np.float32), m, 255).astype(np.uint8)
+                    for im, m in zip(images, transforms)
+                ]
+                for channel in (0, 1)
+            ]
+        grids = displacement_grids(
+            rigid_images, valid_images, mid, he_channels=he_channels
+        )
         pixels = pixel_grid(w, h)
     for i, (im, matrix) in enumerate(zip(images, transforms)):
         registered = warp(im, matrix, (255, 255, 255))
@@ -297,6 +308,8 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
         if local
         else "Adjacent translation search and rigid ECC refinement to middle section",
     )
+    if local:
+        manifest["localRefinement"] = "he" if local == "he" else "intensity"
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2, allow_nan=False), encoding="utf8"
     )
@@ -317,8 +330,10 @@ def main():
     parser.add_argument("--attribution")
     parser.add_argument(
         "--local-refinement",
-        action="store_true",
-        help="Apply a smooth image-based displacement after rigid registration",
+        nargs="?",
+        choices=("intensity", "he"),
+        const="intensity",
+        help="Apply local refinement using intensity (default) or H&E color channels",
     )
     args = parser.parse_args()
     if args.max_side < 16:
