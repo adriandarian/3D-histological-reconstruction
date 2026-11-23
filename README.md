@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. Drag the stack to rotate it, move the section slider, and click in the section to locate that point in 3D. Switch between original and registered images to see the effect of translation. The 36-section phantom uses seeded acquisition offsets and known sampling.
+Open the local URL printed by Vite. Drag the stack to rotate it, move the section slider, and click in the section to locate that point in 3D. Switch between original and registered images to see the effect of registration. The 36-section phantom uses seeded acquisition offsets and known sampling.
 
 ## Run the measured pancreas series
 
@@ -30,9 +30,9 @@ Select **Real histology** in the viewer. This export uses preview pixels for XY 
 
 Each output directory must be new or empty. To process your own series, pass a directory of single-frame images from one block and one magnification to `--input`. Filenames must share a pattern with one varying numeric field that supplies the order. Use `--max-side` to set the maximum preview dimension.
 
-- `manifest.json` links each input filename to its preview, registered image and masked 3D texture. The source-to-registered shift is in preview pixels, with X increasing right and Y increasing down.
+- `manifest.json` links each input filename to its preview, registered image and masked 3D texture. The 2-by-3 source-to-registered matrix maps preview pixel coordinates, with X increasing right and Y increasing down.
 - `volume.npz` contains registered RGB samples in Z,Y,X,channel order and separate tissue and valid-pixel masks in Z,Y,X order. The mask uses color thresholds. It can include artifacts and miss pale tissue.
-- Registration estimates an adjacent translation toward the middle reference section. Inspect the status and before/after correlation of each pair. An identity fallback inherits the fixed section's shift. Chaining can accumulate drift, and translation cannot correct rotation, tears or local distortion.
+- Registration searches for adjacent translations, refines them with bounded rigid rotation, and composes accepted transforms toward the middle reference section. Inspect the status and before/after correlation of each pair. An identity fallback inherits the fixed section's transform. Chaining can accumulate drift, and rigid registration cannot correct tears or local distortion.
 - The 3D display samples the section planes. Missing tissue between samples, anatomical boundaries and physical depth require independent evidence.
 
 Render ten evenly distributed adjacent overlays for review. Red and cyan fringes indicate differences between neighboring sections.

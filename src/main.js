@@ -24,8 +24,12 @@ let data,
   y,
   index,
   loadToken = 0;
-function offset() {
-  return ui.frame.value === "source" ? data.sections[index].shift : [0, 0];
+function sectionTransform() {
+  if (ui.frame.value !== "source") return new DOMMatrix();
+  const { transform, shift } = data.sections[index];
+  if (!transform) return new DOMMatrix().translate(...shift);
+  const [[a, c, e], [b, d, f]] = transform;
+  return new DOMMatrix([a, b, c, d, e, f]);
 }
 function placeCross() {
   const image = viewer.world.getItemAt(0);
@@ -33,9 +37,9 @@ function placeCross() {
     ui.cross.style.display = "none";
     return;
   }
-  const [dx, dy] = offset();
+  const source = sectionTransform().inverse().transformPoint({ x, y });
   const point = viewer.viewport.pixelFromPoint(
-    image.imageToViewportCoordinates(x - dx, y - dy),
+    image.imageToViewportCoordinates(source.x, source.y),
     true,
   );
   Object.assign(ui.cross.style, {
@@ -57,14 +61,14 @@ viewer.addHandler("canvas-click", (event) => {
   const point = image.viewportToImageCoordinates(
     viewer.viewport.pointFromPixel(event.position, true),
   );
-  const [dx, dy] = offset();
+  const registered = sectionTransform().transformPoint(point);
   if (
     point.x >= 0 &&
     point.y >= 0 &&
     point.x < data.width &&
     point.y < data.height
   )
-    selectPoint(point.x + dx, point.y + dy);
+    selectPoint(registered.x, registered.y);
 });
 for (const event of ["open", "animation", "resize", "viewport-change"])
   viewer.addHandler(event, placeCross);
@@ -178,6 +182,8 @@ async function load() {
         "/manifest.json with the Python pipeline, or choose another dataset.";
   }
 }
+if (new URLSearchParams(location.search).get("dataset") === "real")
+  ui.dataset.value = "real";
 ui.dataset.onchange = load;
 ui.section.oninput = () => showSection(Number(ui.section.value));
 ui.frame.onchange = () => showSection(index);

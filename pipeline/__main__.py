@@ -58,11 +58,11 @@ def ncc(a, b, valid=None):
     return float(np.clip(np.sum(a * b) / denominator, -1, 1)) if denominator else 0.0
 
 
-def warp(image, shift, background, interpolation=cv2.INTER_LINEAR):
+def warp(image, matrix, background, interpolation=cv2.INTER_LINEAR):
     h, w = image.shape[:2]
     return cv2.warpAffine(
         image,
-        np.float32([[1, 0, shift[0]], [0, 1, shift[1]]]),
+        matrix[:2],
         (w, h),
         flags=interpolation,
         borderValue=background,
@@ -95,12 +95,51 @@ def coarse_translation(moving, fixed, fixed_shift):
     return np.array([(location[0] - mx) * w / sw, (location[1] - my) * h / sh])
 
 
+def overlap_translation(moving, fixed, fixed_shift):
+    """Search all bounded coarse displacements using overlap-normalized correlation."""
+    height, width = moving.shape
+    size = (max(2, width // 4), max(2, height // 4))
+    a, b = [
+        cv2.resize(im, size, interpolation=cv2.INTER_AREA) for im in (moving, fixed)
+    ]
+    w, h = size
+    mx, my = w // 4, h // 4
+    dx, dy = np.meshgrid(np.arange(-mx, mx + 1), np.arange(-my, my + 1))
+
+    # For each displacement, obtain moments on exactly the shared rectangle.
+    def moments(image, x, y):
+        integral = cv2.integral(image, sdepth=cv2.CV_64F)
+        x0, x1 = np.maximum(0, x), np.minimum(w, w + x)
+        y0, y1 = np.maximum(0, y), np.minimum(h, h + y)
+        return integral[y1, x1] - integral[y0, x1] - integral[y1, x0] + integral[y0, x0]
+
+    sa, sb = moments(a, -dx, -dy), moments(b, dx, dy)
+    area = (w - abs(dx)) * (h - abs(dy))
+    va = moments(a * a, -dx, -dy) - sa * sa / area
+    vb = moments(b * b, dx, dy) - sb * sb / area
+    cross = cv2.matchTemplate(np.pad(b, ((my, my), (mx, mx))), a, cv2.TM_CCORR)
+    denom = np.sqrt(np.maximum(va, 0) * np.maximum(vb, 0))
+    corr = np.divide(
+        cross - sa * sb / area, denom, out=np.full_like(denom, -1), where=denom > 1
+    )
+    tx, ty = dx * width / w, dy * height / h
+    coverage = (1 - abs(fixed_shift[0] + tx) / width) * (
+        1 - abs(fixed_shift[1] + ty) / height
+    )
+    corr[coverage < 0.70] = -1
+    peak = np.unravel_index(np.argmax(corr), corr.shape)
+    if corr[peak] < 0.35:
+        return None
+    return np.array([tx[peak], ty[peak]])
+
+
 def reconstruct(rows, out, name, kind, attribution):
     files, images, offsets = zip(*rows)
     h, w = images[0].shape[:2]
     gray = [cv2.cvtColor(im, cv2.COLOR_RGB2GRAY).astype(np.float32) for im in images]
     mid = len(images) // 2
-    shifts = np.zeros((len(images), 2))
+    transforms = np.repeat(np.eye(3)[None], len(images), axis=0)
+    center = np.array([w / 2, h / 2, 1])
     window = cv2.createHanningWindow((w, h), cv2.CV_32F)
     valid_frame = np.ones((h, w), np.uint8)
     qa = [
@@ -109,34 +148,67 @@ def reconstruct(rows, out, name, kind, attribution):
     ]
     for i in [*range(mid - 1, -1, -1), *range(mid + 1, len(images))]:
         fixed = i + 1 if i < mid else i - 1
+        parent = transforms[fixed]
+        offset = (parent @ center - center)[:2]
         delta, response = cv2.phaseCorrelate(gray[i].copy(), gray[fixed].copy(), window)
         before = ncc(gray[i], gray[fixed])
         candidates = []
         if response >= 0.05 and min(gray[i].std(), gray[fixed].std()) > 0:
             candidates.append(delta)
-        coarse = coarse_translation(gray[i], gray[fixed], shifts[fixed])
+        coarse = coarse_translation(gray[i], gray[fixed], offset)
         if coarse is not None:
             candidates.append(coarse)
-        size = np.array([w, h])
+        overlap_shift = overlap_translation(gray[i], gray[fixed], offset)
+        if overlap_shift is not None:
+            candidates.append(overlap_shift)
+        matrices = []
+        for dx, dy in candidates:
+            matrix = np.eye(3)
+            matrix[:2, 2] = [dx, dy]
+            matrices.append(matrix)
+        seeds = dict.fromkeys(tuple(np.round(m[:2, 2])) for m in matrices)
+        for dx, dy in seeds:
+            # ECC maps template coordinates to input coordinates. Moving is the template.
+            seed = np.float32([[1, 0, dx], [0, 1, dy]])
+            try:
+                _, rigid = cv2.findTransformECC(
+                    gray[i],
+                    gray[fixed],
+                    seed,
+                    cv2.MOTION_EUCLIDEAN,
+                    (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 60, 1e-6),
+                    None,
+                    9,
+                )
+            except cv2.error as error:
+                if error.code != cv2.Error.StsNoConv:
+                    raise
+            else:
+                if abs(np.arctan2(rigid[1, 0], rigid[0, 0])) <= np.deg2rad(15):
+                    matrices.append(np.vstack([rigid, [0, 0, 1]]))
         accepted = False
         score = before
         best_gain = 0.0
-        for translation in candidates:
-            magnitude = np.abs(translation)
-            total = np.abs(shifts[fixed] + translation)
-            if not np.isfinite(total).all() or np.any(magnitude > 0.25 * size):
+        transforms[i] = parent
+        for matrix in matrices:
+            travel = np.abs((matrix @ center - center)[:2])
+            if not np.isfinite(matrix).all() or np.any(
+                travel > 0.25 * np.array([w, h])
+            ):
                 continue
-            if np.prod(np.maximum(0, 1 - total / size)) < 0.70:
+            total = parent @ matrix
+            if warp(valid_frame, total, 0, cv2.INTER_NEAREST).mean() < 0.70:
                 continue
-            valid = warp(valid_frame, translation, 0, cv2.INTER_NEAREST).astype(bool)
-            candidate = ncc(warp(gray[i], translation, 255), gray[fixed], valid)
+            valid = warp(valid_frame, matrix, 0, cv2.INTER_NEAREST).astype(bool)
+            candidate = ncc(warp(gray[i], matrix, 255), gray[fixed], valid)
             overlap_before = ncc(gray[i], gray[fixed], valid)
             gain = candidate - overlap_before
-            if gain > best_gain and candidate >= 0.20:
+            # Prefer translation when a rotation only marginally improves correlation.
+            margin = 0.01 if abs(matrix[1, 0]) > 1e-6 and accepted else 0.0
+            if gain > best_gain + margin and candidate >= 0.20:
                 before, score, best_gain = overlap_before, candidate, gain
                 accepted = True
-                shifts[i] = translation
-        shifts[i] += shifts[fixed]
+                transforms[i] = total
         qa[i] = dict(
             beforeScore=before,
             score=score,
@@ -144,9 +216,9 @@ def reconstruct(rows, out, name, kind, attribution):
             fixed=fixed,
         )
     sections, stack, masks, validity = [], [], [], []
-    for i, (im, shift) in enumerate(zip(images, shifts)):
-        registered = warp(im, shift, (255, 255, 255))
-        valid = warp(valid_frame, shift, 0, cv2.INTER_NEAREST)
+    for i, (im, matrix) in enumerate(zip(images, transforms)):
+        registered = warp(im, matrix, (255, 255, 255))
+        valid = warp(valid_frame, matrix, 0, cv2.INTER_NEAREST)
         hsv = cv2.cvtColor(registered, cv2.COLOR_RGB2HSV)
         mask = (
             ((hsv[:, :, 1] > 18) & (hsv[:, :, 2] < 250)) | (hsv[:, :, 2] < 170)
@@ -157,7 +229,8 @@ def reconstruct(rows, out, name, kind, attribution):
         entry = dict(
             index=i,
             filename=files[i],
-            shift=shift.tolist(),
+            shift=matrix[:2, 2].tolist(),
+            transform=matrix[:2].tolist(),
             z_um=4 * i if kind == "synthetic" else None,
             **qa[i],
         )
@@ -194,7 +267,7 @@ def reconstruct(rows, out, name, kind, attribution):
         volume="volume.npz",
         pixel_size_um=1 if kind == "synthetic" else None,
         section_interval_um=4 if kind == "synthetic" else None,
-        registration="Adjacent phase correlation and coarse normalized template matching to middle section",
+        registration="Adjacent translation search and rigid ECC refinement to middle section",
     )
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2, allow_nan=False), encoding="utf8"

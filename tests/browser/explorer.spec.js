@@ -55,3 +55,27 @@ test('an unavailable export explains how to recover', async ({ page }) => {
   await expect(page.locator('#count')).toContainText('/ 36');
   await expect(page.locator('#volume canvas')).toBeVisible();
 });
+test('a point selected in a rotated source section maps into the registered frame', async ({ page, request }) => {
+  const response = await request.get('/data/real/manifest.json');
+  test.skip(!response.headers()['content-type']?.includes('application/json'), 'Generate real series first');
+  const manifest = await response.json();
+  const index = manifest.sections.findIndex(s => Math.abs(s.transform?.[1][0]) > 0.03);
+  test.skip(index < 0, 'Requires an export containing a rotated section');
+  await page.goto('/?dataset=real');
+  const slider = page.locator('#section');
+  await expect(slider).toHaveAttribute('max', String(manifest.sections.length - 1));
+  await slider.fill(String(index));
+  await page.waitForLoadState('networkidle');
+  const slide = page.locator('#osd');
+  const click = async () => {
+    await slide.click();
+    return (await page.locator('#coords').textContent()).match(/\d+/g).map(Number);
+  };
+  const [x,y] = await click();
+  await page.locator('#frame').selectOption('source');
+  await page.waitForLoadState('networkidle');
+  const [rx,ry] = await click();
+  const [[a,b,dx],[c,d,dy]] = manifest.sections[index].transform;
+  expect(Math.abs(rx - (a*x+b*y+dx))).toBeLessThan(2);
+  expect(Math.abs(ry - (c*x+d*y+dy))).toBeLessThan(2);
+});

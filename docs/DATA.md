@@ -1,4 +1,4 @@
-﻿# Pancreas serial sections
+# Pancreas serial sections
 
 The real-data example uses every image in the **10x Pancreas** folder of Bijoyeta Roy's *Serial Section Histopathology Image Dataset*, version 1 (2023). Contributors include Mousumi Gupta, Bidyut Goswami and Sikkim Manipal Institute of Technology–Majitar. The source images are available under Creative Commons Attribution 4.0 International. [Dataset and attribution](https://doi.org/10.17632/fzskwpzs5j.1) · [License](https://creativecommons.org/licenses/by/4.0/)
 
@@ -15,8 +15,22 @@ The numeric labels give a reproducible order. The publication does not establish
 
 ## Registration review at 640 × 480
 
-The baseline accepted a local translation on 11 of 35 adjacent pairs. The other 24 retained the transform of their neighbor toward the middle reference section. Mean grayscale normalized cross-correlation on the evaluated overlap increased from 0.218 to 0.259.
+All 36 sections were registered to the middle section. The revised pipeline searches coarse translations over their shared field of view and refines candidate translations with rigid enhanced correlation coefficient (ECC) alignment. Candidate rotations are limited to 15 degrees per pair. Each accepted cumulative transform must preserve at least 70% of the preview field. The lowest observed coverage was 70.6%.
 
-The red/cyan overlays for pairs 1/2, 4/5, 8/9, 12/13, 16/17, 19/20, 23/24, 27/28, 31/32 and 35/36 show residual differences throughout the series. In particular, 8/9, 12/13, 19/20 and 31/32 retain large colored regions at tissue margins. Inspect individual pairs before interpreting continuity. Cropping at the edges of translated sections is recorded in the validity mask.
+| Metric on the same 35 adjacent pairs | Translation baseline (938fbf3) | Rigid refinement |
+| --- | ---: | ---: |
+| Accepted adjacent transforms | 11 | 26 |
+| Identity fallbacks | 24 | 9 |
+| Mean correlation on identical valid pixels | 0.245 | 0.323 |
+| Mean error on three exploratory landmarks (preview px) | 17.6 | 17.6 |
 
-[Three exploratory landmark correspondences](pancreas_landmarks.csv) were marked visually in the original previews. Coordinates are in the 640 × 480 source frame, and section numbers start at one. On pairs 1/2, 16/17 and 35/36, the respective distances changed from 17.9 to 17.9, 148.1 to 13.9, and 35.4 to 20.9 preview pixels. The largest initial error accounts for most of the mean improvement (67.1 to 17.6 px). These approximate points cover three pairs and lack independent expert adjudication. The plan's full landmark-validation milestone remains open.
+For each pair, the comparison maps both registrations into the fixed section's original frame and scores the intersection of their valid pixels. Correlation improved on 23 pairs, was unchanged within 0.00001 on 11, and decreased on pair 21/22 (0.487 to 0.418). The viewer reports each method's own overlap. To reproduce the comparison, retain the baseline export from commit 938fbf3 and run:
+
+```sh
+python scripts/compare_registration.py path/to/baseline/manifest.json public/data/real/manifest.json
+python scripts/landmark_error.py public/data/real/manifest.json docs/pancreas_landmarks.csv
+```
+
+The [three existing landmark correspondences](pancreas_landmarks.csv) gave mixed results. On pairs 1/2, 16/17 and 35/36 the baseline errors were 17.9, 13.9 and 20.9 pixels. The revised errors were 20.9, 10.9 and 20.9 pixels. The unregistered mean was 67.1 pixels. These approximate points lack independent expert adjudication. Correlation was used to select transforms, so its increase alone cannot establish improved anatomical accuracy.
+
+Visual review covered pairs 1/2, 4/5, 8/9, 12/13, 16/17, 19/20, 23/24, 27/28, 31/32 and 35/36. The overlays still show mismatched margins, notably on 8/9, 12/13 and 31/32. Edge cropping is visible on 19/20 and represented in the validity mask. An identity fallback inherits its neighbor's transform. Treat these regions as uncertain when following structures in 3D.
