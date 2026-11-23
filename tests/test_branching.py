@@ -1,4 +1,4 @@
-﻿"""Ground truth, topology fault detection and mesh/source round-trip checks."""
+"""Ground truth, topology fault detection and mesh/source round-trip checks."""
 
 from collections import Counter
 import json
@@ -50,4 +50,3 @@ class BranchingTests(unittest.TestCase):
         interrupted[20] = False
         self.assertNotEqual(section_graph(truth), section_graph(interrupted))
         self.assertEqual(section_graph(interrupted)["roots"], [0, 21, 21])
-

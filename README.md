@@ -1,8 +1,8 @@
 # Section Atlas · 3D histological reconstruction
 
-Explore a series of adjacent tissue sections as a rotatable, textured stack and inspect the corresponding section in OpenSeadragon. A standalone Python command registers the images and writes the volume, transforms, QA and viewer assets. The browser reads a static export. Intended for research visualization.
+Reconstruct and explore a branching duct from serial sections. The WebGL2 volume explorer links the segmented surface, original slide and three orthogonal reslices. Switch to pancreas histology to inspect an exploratory cavity candidate, or use the original plane stacks below for comparison. [Methods, validation and limitations](docs/VOLUME_RECONSTRUCTION.md)
 
-![Synthetic and pancreas sections with independent navigators and 3D reconstructions](docs/explorer.webp)
+![Ray-marched phantom with a reconstructed bifurcation and highlighted source section](docs/volume.webp)
 
 ## Run the published demo
 
@@ -46,7 +46,7 @@ Each output directory must be new or empty. To process your own series, pass a d
 - With local refinement (`intensity`, `he`, or `he-contour`), each section also exports a bilinear `pullGrid` sampled across the registered image, including both endpoints. At registered pixel `p`, the corresponding rigid-frame point is `p + grid(p)`. Section images, 3D textures and the linked cursor use the same mapping. Omit the flag to reproduce rigid registration.
 - `volume.npz` contains registered RGB samples in Z,Y,X,channel order and separate tissue and valid-pixel masks in Z,Y,X order. The mask uses color thresholds. It can include artifacts and miss pale tissue.
 - Registration searches for adjacent translations, refines them with bounded rigid rotation, and composes accepted transforms toward the middle reference section. Inspect the status and before/after correlation of each pair. An identity fallback inherits the fixed section's transform. Chaining can accumulate drift, and rigid registration cannot correct tears or local distortion.
-- The 3D display samples the section planes. Missing tissue between samples, anatomical boundaries and physical depth require independent evidence.
+- The comparison stack displays individual section planes. Missing tissue between samples, anatomical boundaries and physical depth require independent evidence.
 
 Render ten evenly distributed adjacent overlays for review. Red and cyan fringes indicate differences between neighboring sections.
 

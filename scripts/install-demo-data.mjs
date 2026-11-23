@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -12,6 +12,10 @@ const datasets = {
 
 const temporary = await mkdtemp(join(tmpdir(), 'histology-demo-'));
 try {
+  // Vite skips public/ because local registration exports can contain large NPZ files.
+  for (const name of ['branching', 'pancreas']) {
+    await cp(join('public', name), join('dist', name), { recursive: true });
+  }
   for (const [name, expectedHash] of Object.entries(datasets)) {
     const url = `${release}/${name}.tar.gz`;
     const response = await fetch(url);
