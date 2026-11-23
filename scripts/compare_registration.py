@@ -1,11 +1,16 @@
 """Compare two registrations on identical pixels in each fixed source image."""
 
 import argparse
+import sys
 import json
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipeline.deformation import pixel_grid, to_registered, to_source
 
 
 def transforms(series):
@@ -48,10 +53,19 @@ def compare(baseline, candidate):
         h, w = target.shape
         valid = np.ones((h, w), dtype=bool)
         warped = []
-        for matrices in transforms_by_method:
-            pair = (np.linalg.inv(matrices[fixed]) @ matrices[i])[:2]
-            warped.append(cv2.warpAffine(moving, pair, (w, h)))
-            mask = cv2.warpAffine(np.ones_like(moving, dtype=np.float32), pair, (w, h))
+        pixels = pixel_grid(w, h)
+        for m, matrices in zip(series, transforms_by_method):
+
+            def field(index):
+                grid = m["sections"][index].get("pullGrid")
+                return None if grid is None else np.asarray(grid)
+
+            aligned = to_registered(pixels, matrices[fixed], field(fixed), w, h)
+            coords = to_source(aligned, matrices[i], field(i), w, h)
+            warped.append(cv2.remap(moving, coords, None, cv2.INTER_LINEAR))
+            mask = cv2.remap(
+                np.ones_like(moving, dtype=np.float32), coords, None, cv2.INTER_LINEAR
+            )
             valid &= mask >= 1
         if valid.sum() < 2 or any(
             np.ptp(image[valid]) == 0 for image in [target, *warped]

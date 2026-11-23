@@ -9,6 +9,7 @@ from PIL import Image
 
 from pipeline.__main__ import load_series, reconstruct
 from pipeline.phantom import generate
+from pipeline.deformation import pixel_grid, to_registered, to_source
 
 
 class ReconstructionTests(unittest.TestCase):
@@ -46,6 +47,42 @@ class ReconstructionTests(unittest.TestCase):
             points = np.array([[40, 50, 1], [330, 260, 1], [200, 160, 1]]).T
             error = (np.array(record["transform"]) - expected) @ points
             self.assertLess(np.linalg.norm(error, axis=0).max(), 1.0)
+
+    def test_local_warp_improves_known_landmarks_and_round_trips(self):
+        _, reference, _ = next(generate(1))
+        h, w = reference.shape[:2]
+        coords = pixel_grid(w, h)
+        coords[:, :, 0] += 8 * np.sin(coords[:, :, 1] * 2 * np.pi / h)
+        moving = cv2.remap(
+            reference, coords, None, cv2.INTER_LINEAR, borderValue=(255, 255, 255)
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            reconstruct(
+                [("1", moving, None), ("2", reference, None)],
+                out,
+                "warp",
+                "synthetic",
+                "test",
+                local=True,
+            )
+            rows = json.loads((out / "manifest.json").read_text())["sections"]
+            matrix = np.array(rows[0]["transform"])
+            field = np.array(rows[0]["pullGrid"])
+            self.assertFalse(np.any(rows[1]["pullGrid"]))
+            points = np.array([[170, 80], [240, 240]])
+            truth = coords[points[:, 1], points[:, 0]]
+            rigid = to_registered(points, matrix, None, w, h)
+            aligned = to_registered(points, matrix, field, w, h)
+            self.assertLess(
+                np.linalg.norm(aligned - truth), np.linalg.norm(rigid - truth)
+            )
+            np.testing.assert_allclose(
+                to_source(aligned, matrix, field, w, h), points, atol=0.01
+            )
+            with np.load(out / "volume.npz") as volume:
+                self.assertGreaterEqual(volume["valid"][0].mean(), 0.7)
+                np.testing.assert_array_equal(volume["rgb"][1], reference)
 
     def test_missing_sections_refused_and_real_series_uncalibrated(self):
         with tempfile.TemporaryDirectory() as temp:

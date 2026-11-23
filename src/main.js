@@ -31,13 +31,38 @@ function sectionTransform() {
   const [[a, c, e], [b, d, f]] = transform;
   return new DOMMatrix([a, b, c, d, e, f]);
 }
+// The pull grid maps a displayed point to its position in the rigid frame.
+function pullAt(point, grid) {
+  const rows = grid.length, cols = grid[0].length;
+  const u = Math.max(0, Math.min(1, point.x / (data.width - 1))) * (cols - 1);
+  const v = Math.max(0, Math.min(1, point.y / (data.height - 1))) * (rows - 1);
+  const i = Math.min(cols - 2, Math.floor(u)), j = Math.min(rows - 2, Math.floor(v));
+  const fx = u - i, fy = v - j;
+  return [0, 1].map(k => (1-fy)*((1-fx)*grid[j][i][k] + fx*grid[j][i+1][k])
+                         + fy*((1-fx)*grid[j+1][i][k] + fx*grid[j+1][i+1][k]));
+}
+function registeredPoint(point) {
+  const rigid = sectionTransform().transformPoint(point);
+  const grid = data.sections[index].pullGrid;
+  if (!grid || ui.frame.value !== "source") return rigid;
+  let aligned = rigid;
+  for (let step = 0; step < 24; step++) {
+    const [dx,dy] = pullAt(aligned, grid);
+    const next = {x: rigid.x - dx, y: rigid.y - dy};
+    if (Math.hypot(next.x-aligned.x, next.y-aligned.y) < 0.001) return next;
+    aligned = next;
+  }
+  return aligned;
+}
 function placeCross() {
   const image = viewer.world.getItemAt(0);
   if (!image || !data) {
     ui.cross.style.display = "none";
     return;
   }
-  const source = sectionTransform().inverse().transformPoint({ x, y });
+  const grid = data.sections[index].pullGrid;
+  const [dx, dy] = grid && ui.frame.value === "source" ? pullAt({x,y}, grid) : [0,0];
+  const source = sectionTransform().inverse().transformPoint({ x: x+dx, y: y+dy });
   const point = viewer.viewport.pixelFromPoint(
     image.imageToViewportCoordinates(source.x, source.y),
     true,
@@ -61,7 +86,7 @@ viewer.addHandler("canvas-click", (event) => {
   const point = image.viewportToImageCoordinates(
     viewer.viewport.pointFromPixel(event.position, true),
   );
-  const registered = sectionTransform().transformPoint(point);
+  const registered = registeredPoint(point);
   if (
     point.x >= 0 &&
     point.y >= 0 &&
@@ -90,7 +115,7 @@ function showSection(value) {
     data.sections.length +
     (Number.isFinite(section.z_um) ? " · Z " + section.z_um + " µm" : "");
   ui.quality.textContent = Number.isFinite(section.score)
-    ? "Adjacent NCC   " +
+    ? "Rigid NCC   " +
       section.beforeScore.toFixed(3) +
       " → " +
       section.score.toFixed(3) +
@@ -145,7 +170,7 @@ async function load() {
     data = series;
     asset = (file) => new URL(file, path).href;
     ui.status.textContent =
-      data.name +
+      data.name + (data.sections[0].pullGrid ? " / Local refinement" : "") +
       " · " +
       data.sections.length +
       " sections · " +

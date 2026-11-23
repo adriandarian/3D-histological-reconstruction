@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from .phantom import generate
+from .deformation import displacement_grids, pixel_grid, to_source
 
 
 def load_series(folder, max_side):
@@ -133,7 +134,7 @@ def overlap_translation(moving, fixed, fixed_shift):
     return np.array([tx[peak], ty[peak]])
 
 
-def reconstruct(rows, out, name, kind, attribution):
+def reconstruct(rows, out, name, kind, attribution, local=False):
     files, images, offsets = zip(*rows)
     h, w = images[0].shape[:2]
     gray = [cv2.cvtColor(im, cv2.COLOR_RGB2GRAY).astype(np.float32) for im in images]
@@ -216,9 +217,32 @@ def reconstruct(rows, out, name, kind, attribution):
             fixed=fixed,
         )
     sections, stack, masks, validity = [], [], [], []
+    grids = None
+    if local:
+        rigid_images = [
+            warp(im, m, 255).astype(np.uint8) for im, m in zip(gray, transforms)
+        ]
+        valid_images = [warp(valid_frame, m, 0, cv2.INTER_NEAREST) for m in transforms]
+        grids = displacement_grids(rigid_images, valid_images, mid)
+        pixels = pixel_grid(w, h)
     for i, (im, matrix) in enumerate(zip(images, transforms)):
         registered = warp(im, matrix, (255, 255, 255))
         valid = warp(valid_frame, matrix, 0, cv2.INTER_NEAREST)
+        if local:
+            grid = grids[i]
+            # Back off the local displacement if it would violate the retained-field limit.
+            while np.any(grid):
+                coords = to_source(pixels, matrix, grid, w, h)
+                local_valid = cv2.remap(valid_frame, coords, None, cv2.INTER_NEAREST)
+                if local_valid.mean() >= 0.70:
+                    valid = local_valid
+                    registered = cv2.remap(
+                        im, coords, None, cv2.INTER_LINEAR, borderValue=(255, 255, 255)
+                    )
+                    break
+                grid *= 0.5
+                if np.max(np.abs(grid)) < 0.01:
+                    grid.fill(0)
         hsv = cv2.cvtColor(registered, cv2.COLOR_RGB2HSV)
         mask = (
             ((hsv[:, :, 1] > 18) & (hsv[:, :, 2] < 250)) | (hsv[:, :, 2] < 170)
@@ -234,7 +258,9 @@ def reconstruct(rows, out, name, kind, attribution):
             z_um=4 * i if kind == "synthetic" else None,
             **qa[i],
         )
-        for key, pixels in (
+        if local:
+            entry["pullGrid"] = grid.tolist()
+        for key, asset_pixels in (
             ("source", im),
             ("registered", registered),
             ("texture", np.dstack((registered, mask.astype(np.uint8) * 255))),
@@ -242,7 +268,7 @@ def reconstruct(rows, out, name, kind, attribution):
             entry[key] = f"{key}/{i:03}.png"
             dest = out / entry[key]
             dest.parent.mkdir(exist_ok=True)
-            asset = Image.fromarray(pixels)
+            asset = Image.fromarray(asset_pixels)
             if key == "texture":
                 asset.thumbnail((256, 256), Image.Resampling.LANCZOS)
             asset.save(dest)
@@ -267,7 +293,9 @@ def reconstruct(rows, out, name, kind, attribution):
         volume="volume.npz",
         pixel_size_um=1 if kind == "synthetic" else None,
         section_interval_um=4 if kind == "synthetic" else None,
-        registration="Adjacent translation search and rigid ECC refinement to middle section",
+        registration="Rigid ECC with smooth local flow correction"
+        if local
+        else "Adjacent translation search and rigid ECC refinement to middle section",
     )
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2, allow_nan=False), encoding="utf8"
@@ -287,6 +315,11 @@ def main():
     parser.add_argument("--max-side", type=int, default=640)
     parser.add_argument("--name")
     parser.add_argument("--attribution")
+    parser.add_argument(
+        "--local-refinement",
+        action="store_true",
+        help="Apply a smooth image-based displacement after rigid registration",
+    )
     args = parser.parse_args()
     if args.max_side < 16:
         parser.error("--max-side must be at least 16")
@@ -305,7 +338,7 @@ def main():
     with tempfile.TemporaryDirectory(dir=dest.parent) as temp:
         stage = Path(temp) / "export"
         stage.mkdir()
-        reconstruct(rows, stage, name, kind, attribution)
+        reconstruct(rows, stage, name, kind, attribution, args.local_refinement)
         # Publish the manifest last so readers only discover a complete stack.
         dest.mkdir(exist_ok=True)
         for asset in sorted(stage.rglob("*"), key=lambda p: p.name == "manifest.json"):

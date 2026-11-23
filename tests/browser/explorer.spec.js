@@ -76,6 +76,18 @@ test('a point selected in a rotated source section maps into the registered fram
   await page.waitForLoadState('networkidle');
   const [rx,ry] = await click();
   const [[a,b,dx],[c,d,dy]] = manifest.sections[index].transform;
-  expect(Math.abs(rx - (a*x+b*y+dx))).toBeLessThan(2);
-  expect(Math.abs(ry - (c*x+d*y+dy))).toBeLessThan(2);
+  const grid = manifest.sections[index].pullGrid;
+  const correction = [0, 0];
+  if (grid) {
+    const u = rx / (manifest.width - 1) * (grid[0].length - 1);
+    const v = ry / (manifest.height - 1) * (grid.length - 1);
+    for (const row of new Set([Math.floor(v), Math.ceil(v)])) {
+      for (const col of new Set([Math.floor(u), Math.ceil(u)])) {
+        const weight = (1 - Math.abs(v - row)) * (1 - Math.abs(u - col));
+        for (let k = 0; k < 2; k++) correction[k] += grid[row][col][k] * weight;
+      }
+    }
+  }
+  expect(Math.abs(rx + correction[0] - (a*x+b*y+dx))).toBeLessThan(2);
+  expect(Math.abs(ry + correction[1] - (c*x+d*y+dy))).toBeLessThan(2);
 });

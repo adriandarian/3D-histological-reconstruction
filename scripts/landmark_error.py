@@ -1,11 +1,16 @@
 """Compare paired landmarks in source and registered preview coordinates."""
 
 import argparse
+import sys
 import csv
 import json
 from pathlib import Path
 
 import numpy as np
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipeline.deformation import to_registered
 
 
 def main():
@@ -18,6 +23,17 @@ def main():
     for section in series["sections"]:
         dx, dy = section["shift"]
         matrices.append(np.array(section.get("transform", [[1, 0, dx], [0, 1, dy]])))
+
+    def position(index, point):
+        grid = series["sections"][index].get("pullGrid")
+        return to_registered(
+            point,
+            matrices[index],
+            np.asarray(grid) if grid is not None else None,
+            series["width"],
+            series["height"],
+        )
+
     errors = []
     with args.pairs.open(newline="", encoding="utf8") as file:
         for row in csv.DictReader(file):
@@ -28,9 +44,7 @@ def main():
             )
             pair = (
                 np.linalg.norm(a - b),
-                np.linalg.norm(
-                    matrices[i] @ np.append(a, 1) - matrices[j] @ np.append(b, 1)
-                ),
+                np.linalg.norm(position(i, a) - position(j, b)),
             )
             errors.append(pair)
             print(f"{i + 1}/{j + 1}: {pair[0]:.1f} -> {pair[1]:.1f} px")
