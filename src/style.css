@@ -258,7 +258,7 @@ article footer { overflow-wrap: anywhere; }
 .source-image canvas { width: auto; height: 100%; }
 .source-outlines, .source-links { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .source-outlines { margin: 0 18px 10px; }
-#capillary-evidence { padding: 0 18px 14px; font-size: 13px; line-height: 1.5; }
+#capillary-evidence, #fork-evidence { padding: 0 18px 14px; font-size: 13px; line-height: 1.5; }
 #pair-evidence { margin: 0 0 8px; }
 .source-links a { color: var(--ink); }
 #volume-controls, .clip-controls { margin: 4px 16px 12px; padding: 10px; border: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 14px; }

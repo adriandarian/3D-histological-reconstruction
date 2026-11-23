@@ -26,6 +26,8 @@
           <label>Series <select id="volume-series">
             <option value="branching">Branching phantom</option>
             <option value="capillary">H01 cortical capillary V1</option>
+            <option value="bifurcation">FAFB neuronal bifurcation</option>
+            <option value="vascular-fork">H01 vascular fork candidate</option>
             <option value="pancreas">Pancreas histology</option>
           </select></label>
         </div>
@@ -55,6 +57,7 @@
             <div class="source-outlines">
               <label><input id="overlay" type="checkbox" checked> Segmentation (gold)</label>
               <label id="reference-control" hidden><input id="reference-overlay" type="checkbox" checked> Published reference (cyan)</label>
+              <label id="point-control" hidden><input id="point-overlay" type="checkbox" checked> Reference points</label>
             </div>
             <div class="source-image"><canvas id="source-image" aria-label="Source image and selected region contours"></canvas></div>
             <div class="foot"><output id="source-readout"></output></div>
@@ -65,6 +68,21 @@
                 <a id="source-h01" target="_blank" rel="noopener">Locate in H01</a>
                 <a id="reference-tiff" target="_blank" rel="noopener">Reference TIFF</a>
                 <a href="https://doi.org/10.3389/fcell.2026.1788958" target="_blank" rel="noopener">V1 study</a>
+              </div>
+            </div>
+            <div id="fork-evidence" hidden>
+              <div class="source-links" aria-label="Locate a reference point">
+                <button type="button" data-arm="parent">Parent</button>
+                <button type="button" data-arm="daughterA">Daughter A</button>
+                <button type="button" data-arm="daughterB">Daughter B</button>
+              </div>
+              <p id="fork-result"></p>
+              <div class="source-links">
+                <a id="fork-image" target="_blank" rel="noopener">Open EM crop</a>
+                <a id="fork-location" target="_blank" rel="noopener">Native EM location</a>
+                <a id="fork-trace" target="_blank" rel="noopener">Reference coordinates</a>
+                <a id="fork-node" target="_blank" rel="noopener" hidden>Nearest traced node</a>
+                <a id="fork-study" target="_blank" rel="noopener">Dataset and methods</a>
               </div>
             </div>
           </section>

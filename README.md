@@ -1,8 +1,14 @@
 # Section Atlas · 3D histological reconstruction
 
-Reconstruct and explore a branching duct from serial sections. The WebGL2 volume explorer links the segmented surface, original slide and three orthogonal reslices. Switch to pancreas histology to inspect an exploratory cavity candidate, or use the original plane stacks below for comparison. [Methods, validation and limitations](docs/VOLUME_RECONSTRUCTION.md)
+Section Atlas reconstructs structures from serial tissue sections and links each selected surface point to its source image. The WebGL2 workspace provides volume rendering, labeled surfaces, orthogonal reslices, clipping, and independent comparison against source annotations where available.
 
-![Ray-marched phantom with a reconstructed bifurcation and highlighted source section](docs/volume.webp)
+The research goal is to determine whether serial H&E slides can establish which tissue structures connect and whether access to the reconstruction improves a reader's judgment. The [research direction](docs/RESEARCH_DIRECTION.md) defines the next H&E experiment and a comparison with conventional serial-slide review.
+
+The [project guide](docs/PROJECT_GUIDE.md) indexes every experiment, its data and units, reproduction commands, validation evidence, and development history. For the two-daughter experiment, start with the [real bifurcation study](docs/REAL_BIFURCATION.md).
+
+Open `?dataset=bifurcation` in the built app to follow both daughters of a manually traced fly projection neuron. The mesh resolves distinct daughter profiles on eight consecutive EM sections. A separate human cortical vascular candidate is available at `?dataset=vascular-fork`. [Vascular evidence and unresolved junction](docs/H01_VASCULAR_FORK.md)
+
+![Measured EM sections with the predicted neuronal boundary and independent daughter annotations](docs/fafb-daughters.png)
 
 ## Real capillary validation
 
@@ -18,7 +24,7 @@ npm run build
 npm run preview
 ```
 
-Open the URL printed by Vite to explore both 36-section datasets. The production build downloads the two versioned exports, verifies their SHA-256 checksums, and installs them in `dist/data/`. Vercel uses the same build command and serves `dist/` as a static site. [Published demo datasets](https://github.com/adriandarian/3D-histological-reconstruction/releases/tag/demo-datasets-v1)
+Open the URL printed by Vite to use the volume cases and both 36-section comparison stacks. The production build downloads the two versioned exports, verifies their SHA-256 checksums, and installs them in `dist/data/`. Vercel uses the same build command and serves `dist/` as a static site. [Published demo datasets](https://github.com/adriandarian/3D-histological-reconstruction/releases/tag/demo-datasets-v1)
 
 ## Generate the synthetic demonstration locally
 
@@ -40,7 +46,9 @@ python scripts/download_real.py
 python -m pipeline --input data/real --output public/data/real --local-refinement he-contour --name "Pancreas · 10x" --attribution "Roy, Gupta and Goswami (2023), DOI 10.17632/fzskwpzs5j.1, CC BY 4.0"
 ```
 
-The viewer displays **Synthetic series** and **Pancreas histology** together. Each has its own section navigator, cursor, zoom and 3D camera. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. The original TIFFs stay in `data/real/`. See [data provenance and ordering](docs/DATA.md).
+To compare the anatomy volume with a new pancreas registration, run `python -m pipeline.pancreas public/data/real public/pancreas` after registration. This associates the candidate with those exact transforms.
+
+The comparison panels display **Synthetic series** and **Pancreas histology** together. Each has its own section navigator, cursor, zoom and 3D camera. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. The original TIFFs stay in `data/real/`. See [data provenance and ordering](docs/DATA.md).
 
 ## Inspect an export
 

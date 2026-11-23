@@ -1,5 +1,6 @@
 import { createRayVolume } from "./ray-volume.js";
 import { pullAt } from "./coordinates.js";
+import { drawTrace, intervalText, locateArm, nativeLocation } from "./fork-evidence.js";
 
 const element = id => document.getElementById(id);
 const controls = element("volume-controls");
@@ -124,6 +125,8 @@ function drawSource() {
   if (element("overlay").checked) contour(current.labels, 2, "#ffb600");
   if (current.reference && element("reference-overlay").checked) contour(current.reference, 1, "#00dcf6");
   if (current.uncertain && element("overlay").checked) contour(current.uncertain, 1, "#ff2592");
+  if (current.trace && element("point-overlay").checked)
+    drawTrace(ctx, project, current.trace.planes[z].points);
   const [x,y]=project(cx,cy);
   ctx.strokeStyle="#008273";
   ctx.lineWidth=Math.max(.5,source.width/480);
@@ -137,6 +140,21 @@ function drawSource() {
     const role = z === 0 ? "Author seed" : "Held-out comparison";
     const fragment = current.uncertain[(z*h+cy)*w+cx] ? " · Unmatched fragment" : "";
     element("source-readout").textContent = `H01 section ${firstH01Section + z} · ${role} · Crop X ${Math.round(x-.5)}, Y ${Math.round(y-.5)} px${fragment}`;
+  }
+  if (current.trace) {
+    const plane = current.trace.planes[z];
+    element("source-readout").textContent = `EM section ${plane.z} · Crop X ${Math.round(x-.5)}, Y ${Math.round(y-.5)} px`;
+    const incoming = current.validation.intervals?.[z-1];
+    const witness = incoming?.tracedDaughterSplit
+      ? ` Both daughter regions share voxel faces with the same parent region on section ${incoming.fromZ}.` : "";
+    element("fork-result").textContent = intervalText(current.validation.planes[z]) + witness;
+    const nodeLink = element("fork-node");
+    nodeLink.hidden = !current.trace.skeletonId || plane.points.length === 0;
+    if (!nodeLink.hidden) {
+      const nearest = plane.points.reduce((a,b) =>
+        Math.hypot(a.x-cx,a.y-cy) <= Math.hypot(b.x-cx,b.y-cy) ? a : b);
+      nodeLink.href = `https://fafb.catmaid.virtualflybrain.org/?pid=1&active_skeleton_id=${current.trace.skeletonId}&active_node_id=${nearest.node}`;
+    }
   }
 }
 
@@ -180,6 +198,10 @@ function showSource() {
     ? new URL(current.registration.sections[z].source, current.realBase).href
     : new URL(current.sections[z], current.base).href;
   if (current.reference) showEvidence(z, url);
+  if (current.trace) {
+    element("fork-image").href = url;
+    element("fork-location").href = nativeLocation(current,cursor);
+  }
   if (url === sourceUrl) { drawSource(); return; }
   sourceUrl = url;
   sourceImage = null;
@@ -204,6 +226,7 @@ function select(point) {
     element("slice-"+axis).value=cursor[i];
     const firstIndex = axis === "z" ? (current.reference ? firstH01Section : 1) : 0;
     element(axis+"-value").value=cursor[i]+firstIndex;
+    if (axis === "z" && current.trace) element("z-value").value = current.trace.planes[cursor[i]].z;
   });
   renderer?.select(cursor[2],cursor[0],cursor[1]);
   drawReslices();
@@ -222,6 +245,8 @@ async function load() {
   element("source-readout").textContent="";
   element("reference-control").hidden = true;
   element("capillary-evidence").hidden = true;
+  element("fork-evidence").hidden = true;
+  element("point-control").hidden = true;
   element("source-heading").textContent = "Original section";
   element("foreground-name").textContent = "Tissue foreground";
   element("ray-host").textContent="";
@@ -231,21 +256,26 @@ async function load() {
   const realBase=new URL("./data/real/manifest.json",document.baseURI);
   const real=series.value==="pancreas";
   const capillary=series.value==="capillary";
+  const fork=series.value==="bifurcation" || series.value==="vascular-fork";
   try {
     const manifest=await resource(base,"json",signal);
     const asset=(name,method)=>resource(new URL(name,base),method,signal);
-    const [rgbBuffer,labelBuffer,mesh,registration,foregroundBuffer,referenceBuffer,validation,uncertainBuffer] = await Promise.all([
+    const [rgbBuffer,labelBuffer,mesh,registration,foregroundBuffer,referenceBuffer,validation,uncertainBuffer,trace] = await Promise.all([
       asset(manifest.rgb,"arrayBuffer"),asset(manifest.labels,"arrayBuffer"),
       manifest.mesh && asset(manifest.mesh,"json"),real ? loadRegistration(realBase,manifest.registrationSha256,signal) : null,
       manifest.foreground && asset(manifest.foreground,"arrayBuffer"),
       capillary && asset(manifest.reference,"arrayBuffer"),
-      capillary && asset(manifest.validation,"json"),
-      capillary && asset(manifest.uncertain,"arrayBuffer")
+      (capillary || fork) && asset(manifest.validation,"json"),
+      capillary && asset(manifest.uncertain,"arrayBuffer"),
+      fork && asset(manifest.reference,"json")
     ]);
     if(signal.aborted) return;
     const rgb=new Uint8Array(rgbBuffer), labels=new Uint8Array(labelBuffer);
     const {dimensions}=manifest;
     const count=dimensions.reduce((a,b)=>a*b,1);
+    if (fork && (trace.planes.length !== dimensions[2] || validation.planes.length !== dimensions[2] ||
+        trace.planes.some((p,i) => p.z !== validation.planes[i].z)))
+      throw Error("Reference coordinates and section scores refer to different planes");
     const reference=capillary ? new Uint8Array(referenceBuffer) : null;
     const uncertain=capillary ? new Uint8Array(uncertainBuffer) : null;
     if (capillary && (reference.length !== count || uncertain.length !== count ||
@@ -257,7 +287,15 @@ async function load() {
       throw Error("Inconsistent reconstruction dimensions");
     // Uncalibrated sections use unitless index coordinates on every axis.
     const spacing=manifest.spacing || [1,1,1];
-    current={...manifest,base,realBase,registration,rgb,labels,dimensions,spacing,reference,validation,uncertain};
+    current={...manifest,base,realBase,registration,rgb,labels,dimensions,spacing,reference,validation,uncertain,trace};
+    if (fork) {
+      element("point-control").hidden = false;
+      element("fork-evidence").hidden = false;
+      element("source-heading").textContent = "Registered EM section";
+      element("foreground-name").textContent = "Sampled EM field";
+      element("fork-trace").href = new URL(manifest.reference,base).href;
+      element("fork-study").href = manifest.studyUrl;
+    }
     if (capillary) {
       element("reference-control").hidden = false;
       element("capillary-evidence").hidden = false;
@@ -279,10 +317,11 @@ async function load() {
       status.textContent = `H01 human cerebral cortex · Registered serial electron micrographs. Nominal voxel spacing ${spacing.join(" × ")} µm (X, Y, Z). Gold traces the lumen from the author seed on section 600. Cyan shows the published, human-corrected reference. Later sections were held out for comparison. Magenta marks predicted fragments unmatched to the main lumen. Detached reference islands have uncertain branch identity and are excluded from the link score.`;
     }
     status.textContent+=" The volume interpolates intensities between sections. Reslices show sampled voxels.";
+    if (fork) status.textContent = `${manifest.caseDescription} Display spacing ${spacing.join(" × ")} µm (X, Y, Z). Gold outlines the reconstruction. Rings mark reference points on each measured section.`;
     try {
       renderer=createRayVolume(element("ray-host"),{
         dimensions,spacing,rgba,labels:anatomy,uncertain,
-        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary
+        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary || fork
       },(x,y,z)=>{element("overlay").checked=true;select([x,y,z]);});
       controls.disabled=false;
       renderSettings();
@@ -290,7 +329,8 @@ async function load() {
       console.warn(error);
       element("ray-host").textContent="3D rendering requires WebGL 2.";
     }
-    const z = capillary ? 0 : real ? 9 : Math.floor(dimensions[2]/2);
+    const resolvedPlane = fork ? validation.planes.findIndex(p => p.distinctDaughters === true) : -1;
+    const z = resolvedPlane >= 0 ? resolvedPlane : capillary ? 0 : real ? 9 : Math.floor(dimensions[2]/2);
     const area = dimensions[0] * dimensions[1];
     const firstLabel = labels.subarray(z*area,(z+1)*area).findIndex(
       (value,i) => value === 2 && !current.uncertain?.[z*area+i]);
@@ -308,6 +348,14 @@ element("ray-reset").onclick=()=>renderer?.reset();
 document.querySelector(".clip-controls").oninput=renderSettings;
 element("overlay").onchange=()=>select(cursor);
 element("reference-overlay").onchange=drawSource;
+element("point-overlay").onchange=drawSource;
+for (const button of element("fork-evidence").querySelectorAll("[data-arm]")) {
+  button.onclick = () => {
+    if (!current?.trace) return;
+    const point = locateArm(current.trace, current.validation, button.dataset.arm, cursor[2]);
+    if (point) select(point);
+  };
+}
 axes.forEach((a,i)=>element("slice-"+a).oninput=event=>{
   const p=[...cursor]; p[i]=+event.target.value; select(p);
 });
@@ -319,5 +367,6 @@ for (const [plane,u,v] of slices) element(plane).onclick=event=>{
   select(p);
 };
 new ResizeObserver(()=>{if(current) drawReslices();}).observe(element("xy").parentElement);
-if (new URLSearchParams(location.search).get("dataset") === "capillary") series.value = "capillary";
+const requestedSeries = new URLSearchParams(location.search).get("dataset");
+if ([...series.options].some(option => option.value === requestedSeries)) series.value = requestedSeries;
 load();
