@@ -10,6 +10,8 @@ Open the app with `?dataset=bifurcation` or select **FAFB neuronal bifurcation**
 
 ![Gold model boundary with independent parent and daughter centerline points on four measured EM sections](fafb-daughters.png)
 
+![Viewer with the reconstructed neuronal surface and Daughter B selected on the measured section](fafb-viewer.webp)
+
 ## Specimen, reference and selection
 
 The Full Adult Fly Brain (FAFB) dataset contains registered serial-section transmission electron microscopy of an adult female *Drosophila melanogaster*. We selected a branch of the neuron named **Uniglomerular mALT VA6 adPN 017 DB**, CATMAID skeleton 16. Manual node **780** has two children, **835** (A) and **781** (B). The ground truth for the local branch identity consists of these human-traced node and parent relationships. It contains no independent membrane outlines. [FAFB acquisition paper](https://doi.org/10.1016/j.cell.2018.06.019) · [Open the manual branch point](https://fafb.catmaid.virtualflybrain.org/?pid=1&active_skeleton_id=16&active_node_id=780)
