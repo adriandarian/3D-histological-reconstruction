@@ -31,7 +31,7 @@
         <div class="volume-layout">
           <section>
             <div id="ray-host" aria-label="Interactive 3D volume"></div>
-            <div class="foot"><span>Drag to orbit ? Click anatomy to locate its source</span><button id="ray-reset">Reset view</button></div>
+            <div class="foot"><span>Drag to orbit &middot; Click anatomy to locate its source</span><button id="ray-reset">Reset view</button></div>
             <fieldset id="volume-controls">
               <legend>Volume layers</legend>
               <label><input type="checkbox" id="histology" checked> Histology</label>
@@ -60,7 +60,7 @@
           <figure><figcaption><strong>XZ</strong> Coronal</figcaption><div><canvas id="xz"></canvas></div><label>Row Y <output id="y-value"></output><input id="slice-y" type="range" min="0" value="0"></label></figure>
           <figure><figcaption><strong>YZ</strong> Sagittal</figcaption><div><canvas id="yz"></canvas></div><label>Column X <output id="x-value"></output><input id="slice-x" type="range" min="0" value="0"></label></figure>
         </div>
-        <p id="volume-status" role="status">Loading reconstruction?</p>
+        <p id="volume-status" role="status">Loading reconstruction&hellip;</p>
       </article>
       <h2 id="comparison">Plane-stack comparison</h2>
       <div class="datasets">
