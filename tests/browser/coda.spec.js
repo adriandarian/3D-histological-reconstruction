@@ -1,9 +1,9 @@
-﻿import { existsSync } from "node:fs";
-import { test, expect } from "@playwright/test";
+﻿import { test, expect } from "@playwright/test";
 
 test("locally generated CODA trace maps the distal section to the native slide", async ({ page, request }) => {
-  test.skip(!existsSync("public/data/coda-lung/manifest.json"), "Generate the pinned CODA slides locally");
-  const manifest = await (await request.get("/data/coda-lung/manifest.json")).json();
+  const response = await request.get("/data/coda-lung/manifest.json");
+  test.skip(!response.headers()["content-type"]?.includes("application/json"), "Requires the local CODA image export");
+  const manifest = await response.json();
   await page.goto("/?dataset=coda-lung");
   await expect(page.locator("#source-readout")).toContainText("lungs_021.ndpi");
   await expect(page.locator("#ray-host canvas")).toBeVisible();

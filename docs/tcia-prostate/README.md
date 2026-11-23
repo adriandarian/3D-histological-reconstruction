@@ -13,7 +13,7 @@ Open the volume explorer with `?dataset=tcia-prostate`. On B, D, F and G, gold s
 
 ![Expert contours, frozen predictions and the nearest-anchor control on the same H&E images](holdouts.png)
 
-The distance interpolation shrank the predicted regions where the surrounding anchors disagreed. It missed 1,865 annotated grid pixels on C and all 3,439 on E. The nearest anchor also had poor spatial agreement. This experiment cannot isolate anatomical change from orientation, stitching and registration error. Independent intraprostatic landmark checks would help distinguish those explanations on a fresh case. The frozen result is retained for comparison. [Pixel counts and prediction digest](scores.json) ? [Publisher checksums verified for the twelve inputs](input-md5.txt)
+The distance interpolation shrank the predicted regions where the surrounding anchors disagreed. It missed 1,865 annotated grid pixels on C and all 3,439 on E. The nearest anchor also had poor spatial agreement. This experiment cannot isolate anatomical change from orientation, stitching and registration error. Independent intraprostatic landmark checks would help distinguish those explanations on a fresh case. Multifocal disease, sparse sampling and normalization by the organ bounding box are additional possible explanations. Testing any revised method requires a newly frozen, independent evaluation split. C and E are now known outcomes. [Pixel counts and prediction digest](scores.json) ? [Publisher checksums verified for the twelve inputs](input-md5.txt)
 
 ## Study design
 

@@ -21,3 +21,5 @@ For each adjacent pair, record the earlier and later slide and profile IDs, rela
 ## Compare the frozen readings
 
 Use the candidate from commit 2d8437b. Report reader agreement before any consensus review. Compare the predicted mask to each native outline separately, then report supported, missed and extra links with their denominators. List indeterminate and unreviewed intervals separately. For 007 to 009, inspect the flanking slides 005 and 011 and distinguish a spatially resolved pair of daughters from an expanded single airspace or segmentation spill. A change in projected area cannot establish a bifurcation. The odd-numbered slides skip a physical cut. Even agreement on a split localizes the transition only to the supported interval.
+
+See the [native-coordinate import schema and landmark QA commands](ANNOTATION_IMPORT.md) for submission formats and checks.
