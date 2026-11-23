@@ -2,7 +2,7 @@
 
 Explore a series of adjacent tissue sections as a rotatable, textured stack and inspect the corresponding section in OpenSeadragon. A standalone Python command registers the images and writes the volume, transforms, QA and viewer assets. The browser reads a static export. Intended for research visualization.
 
-![Synthetic tissue section and its selected plane in the rotatable stack](docs/explorer.webp)
+![Synthetic and pancreas sections with independent navigators and 3D reconstructions](docs/explorer.webp)
 
 ## Run the synthetic demonstration
 
@@ -24,7 +24,7 @@ python scripts/download_real.py
 python -m pipeline --input data/real --output public/data/real --local-refinement he-contour --name "Pancreas · 10x" --attribution "Roy, Gupta and Goswami (2023), DOI 10.17632/fzskwpzs5j.1, CC BY 4.0"
 ```
 
-Select **Real histology** in the viewer. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. Original TIFFs and generated exports stay local. See [data provenance and ordering](docs/DATA.md).
+The viewer displays **Synthetic series** and **Pancreas histology** together. Each has its own section navigator, cursor, zoom and 3D camera. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. Original TIFFs and generated exports stay local. See [data provenance and ordering](docs/DATA.md).
 
 ## Inspect an export
 
