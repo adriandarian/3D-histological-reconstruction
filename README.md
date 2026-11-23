@@ -4,7 +4,19 @@ Explore a series of adjacent tissue sections as a rotatable, textured stack and 
 
 ![Synthetic and pancreas sections with independent navigators and 3D reconstructions](docs/explorer.webp)
 
-## Run the synthetic demonstration
+## Run the published demo
+
+From a clean checkout, use Node.js 22.16 or newer and a system `tar` command.
+
+```sh
+npm ci
+npm run build
+npm run preview
+```
+
+Open the URL printed by Vite to explore both 36-section datasets. The production build downloads the two versioned exports, verifies their SHA-256 checksums, and installs them in `dist/data/`. Vercel uses the same build command and serves `dist/` as a static site. [Published demo datasets](https://github.com/adriandarian/3D-histological-reconstruction/releases/tag/demo-datasets-v1)
+
+## Generate the synthetic demonstration locally
 
 From the repository root, use Python 3.11–3.13 in a virtual environment and Node.js 22.16 or newer.
 
@@ -24,7 +36,7 @@ python scripts/download_real.py
 python -m pipeline --input data/real --output public/data/real --local-refinement he-contour --name "Pancreas · 10x" --attribution "Roy, Gupta and Goswami (2023), DOI 10.17632/fzskwpzs5j.1, CC BY 4.0"
 ```
 
-The viewer displays **Synthetic series** and **Pancreas histology** together. Each has its own section navigator, cursor, zoom and 3D camera. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. Original TIFFs and generated exports stay local. See [data provenance and ordering](docs/DATA.md).
+The viewer displays **Synthetic series** and **Pancreas histology** together. Each has its own section navigator, cursor, zoom and 3D camera. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. The original TIFFs stay in `data/real/`. See [data provenance and ordering](docs/DATA.md).
 
 ## Inspect an export
 
@@ -54,6 +66,6 @@ npm run build
 npm run preview
 ```
 
-Generate the synthetic export before running browser tests. The real-series test also runs when its export exists. Build after generating the datasets you want to serve. The static output is in `dist/`.
+Generate the synthetic export before running browser tests. The real-series test also runs when its local export exists. Use `npm run dev` for locally generated datasets. To update the production demo, publish new export archives in a new release and update the release URL and SHA-256 values in `scripts/install-demo-data.mjs`.
 
 The pipeline holds preview arrays in memory and the viewer loads downsampled textures. Whole-slide ingestion, tiled multiresolution export and chunked 3D access are future work. The [POC plan](docs/POC_PLAN.md) describes the path to larger series and the proposed independent landmark validation.
