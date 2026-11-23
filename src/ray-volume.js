@@ -64,7 +64,7 @@ function flat(array) {
   return Array.isArray(array[0]) ? array.flat() : array;
 }
 
-export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh}, onPick) {
+export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, uncertain}, onPick) {
   const [nx, ny, nz] = dimensions;
   if (rgba.length !== nx * ny * nz * 4 || labels.length !== nx * ny * nz)
     throw new Error("Volume buffer size differs from its dimensions.");
@@ -112,11 +112,33 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh},
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions,3));
     const indices = flat(mesh.faces);
-    geometry.setIndex(Array.from(indices));
+    const options = {side:THREE.DoubleSide, clippingPlanes:[clip]};
+    const normalMaterial = new THREE.MeshNormalMaterial(options);
+    let surfaceMaterial = normalMaterial;
+    if (uncertain) {
+      // Sample just inside each outward-facing voxel triangle in the original XYZ frame.
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+      const center = new THREE.Vector3(), certainFaces = [], uncertainFaces = [];
+      for (let i=0; i<indices.length; i+=3) {
+        a.fromArray(vertices,3*indices[i]);
+        b.fromArray(vertices,3*indices[i+1]);
+        c.fromArray(vertices,3*indices[i+2]);
+        center.copy(a).add(b).add(c).multiplyScalar(1/3);
+        const normal = b.sub(a).cross(c.sub(a)).normalize();
+        center.addScaledVector(normal,-.25).round();
+        const voxel = (center.z*ny+center.y)*nx+center.x;
+        const faces = uncertain[voxel] ? uncertainFaces : certainFaces;
+        faces.push(indices[i], indices[i+1], indices[i+2]);
+      }
+      geometry.setIndex(certainFaces.concat(uncertainFaces));
+      geometry.addGroup(0,certainFaces.length,0);
+      geometry.addGroup(certainFaces.length,uncertainFaces.length,1);
+      surfaceMaterial = [normalMaterial, new THREE.MeshBasicMaterial({...options,color:0xff2592})];
+    } else {
+      geometry.setIndex(Array.from(indices));
+    }
     geometry.computeVertexNormals();
-    anatomy = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial({
-      side:THREE.DoubleSide, clippingPlanes:[clip]
-    }));
+    anatomy = new THREE.Mesh(geometry, surfaceMaterial);
     surfaces.add(anatomy);
   }
   const marker = new THREE.Mesh(new THREE.SphereGeometry(.009,12,8),
@@ -195,7 +217,7 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh},
     observer.disconnect();
     controls.dispose();
     for (const obj of [cube,marker,anatomy].filter(Boolean)) {
-      obj.material.dispose();
+      for (const material of [].concat(obj.material)) material.dispose();
       obj.geometry.dispose();
     }
     target.dispose();

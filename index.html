@@ -25,6 +25,7 @@
           <h2 id="volume-title">Volume explorer</h2>
           <label>Series <select id="volume-series">
             <option value="branching">Branching phantom</option>
+            <option value="capillary">H01 cortical capillary V1</option>
             <option value="pancreas">Pancreas histology</option>
           </select></label>
         </div>
@@ -34,11 +35,11 @@
             <div class="foot"><span>Drag to orbit &middot; Click anatomy to locate its source</span><button id="ray-reset">Reset view</button></div>
             <fieldset id="volume-controls">
               <legend>Volume layers</legend>
-              <label><input type="checkbox" id="histology" checked> Histology</label>
-              <label><input type="checkbox" id="tissue"> Tissue foreground</label>
+              <label><input type="checkbox" id="histology" checked> Section intensities</label>
+              <label><input type="checkbox" id="tissue"> <span id="foreground-name">Tissue foreground</span></label>
               <label><input type="checkbox" id="anatomy" checked> <span id="anatomy-name">Segmented anatomy</span></label>
               <label>Opacity gain <input id="opacity" type="range" min="0" max="1" step=".01" value=".22"></label>
-              <label>Stain threshold <input id="threshold" type="range" min="0" max="1" step=".01" value=".10"></label>
+              <label>Intensity threshold <input id="threshold" type="range" min="0" max="1" step=".01" value=".10"></label>
             </fieldset>
             <details class="clipping"><summary>Clipping plane</summary>
               <div class="clip-controls">
@@ -50,9 +51,22 @@
             </details>
           </section>
           <section class="source-panel">
-            <div class="panel-head"><h3>Original section</h3><label><input id="overlay" type="checkbox" checked> Outline label</label></div>
-            <div class="source-image"><canvas id="source-image" aria-label="Original section with selected anatomy outlined"></canvas></div>
+            <div class="panel-head"><h3 id="source-heading">Original section</h3></div>
+            <div class="source-outlines">
+              <label><input id="overlay" type="checkbox" checked> Segmentation (gold)</label>
+              <label id="reference-control" hidden><input id="reference-overlay" type="checkbox" checked> Published reference (cyan)</label>
+            </div>
+            <div class="source-image"><canvas id="source-image" aria-label="Source image and selected region contours"></canvas></div>
             <div class="foot"><output id="source-readout"></output></div>
+            <div id="capillary-evidence" hidden>
+              <p id="pair-evidence"></p>
+              <div class="source-links">
+                <a id="source-png" target="_blank" rel="noopener">Open EM crop</a>
+                <a id="source-h01" target="_blank" rel="noopener">Locate in H01</a>
+                <a id="reference-tiff" target="_blank" rel="noopener">Reference TIFF</a>
+                <a href="https://doi.org/10.3389/fcell.2026.1788958" target="_blank" rel="noopener">V1 study</a>
+              </div>
+            </div>
           </section>
         </div>
         <div class="reslices">
