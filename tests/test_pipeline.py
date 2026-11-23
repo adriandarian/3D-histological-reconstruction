@@ -9,6 +9,7 @@ from PIL import Image
 
 from pipeline.__main__ import load_series, reconstruct
 from pipeline.phantom import generate
+from pipeline.contours import refine_exposed_tips
 from pipeline.deformation import pixel_grid, to_registered, to_source
 
 
@@ -84,6 +85,50 @@ class ReconstructionTests(unittest.TestCase):
                 with np.load(out / "volume.npz") as volume:
                     self.assertGreaterEqual(volume["valid"][0].mean(), 0.7)
                     np.testing.assert_array_equal(volume["rgb"][1], reference)
+
+    def test_exposed_tip_moves_while_interior_points_stay_fixed(self):
+        h, w = 320, 400
+        images = []
+        for dx in (0, 8):
+            image = np.full((h, w, 3), 255, np.uint8)
+            cv2.rectangle(image, (32, 206), (368, h), (192, 90, 153), -1)
+            polygon = np.array(
+                [[158, 208], [192 + dx, 112], [202 + dx, 112], [230, 208]]
+            )
+            cv2.fillPoly(image, [polygon], (192, 90, 153))
+            images.append(image)
+        grids = np.zeros((2, 15, 18, 2), np.float32)
+        grids[..., 0] = 1
+        matrices = np.repeat(np.eye(3)[None], 2, axis=0)
+        coords = pixel_grid(w, h) + [1, 0]
+        registered = [
+            cv2.remap(
+                im,
+                coords.astype("f"),
+                None,
+                cv2.INTER_LINEAR,
+                borderValue=(255, 255, 255),
+            )
+            for im in images
+        ]
+        masks = [np.ones((h, w), np.uint8) for _ in images]
+        point = np.array([197.0, 112.0])
+        refine_exposed_tips(images, matrices, grids, registered, masks)
+        first, second = [
+            to_registered(p, m, g, w, h)
+            for p, m, g in zip((point, point + [8, 0]), matrices, grids)
+        ]
+        self.assertLess(np.linalg.norm(first - second), 5)
+        np.testing.assert_array_equal(grids[:, -1, :, 0], 1)
+        for im, matrix, grid, output in zip(images, matrices, grids, registered):
+            expected = cv2.remap(
+                im,
+                to_source(pixel_grid(w, h), matrix, grid, w, h),
+                None,
+                cv2.INTER_LINEAR,
+                borderValue=(255, 255, 255),
+            )
+            np.testing.assert_array_equal(output, expected)
 
     def test_missing_sections_refused_and_real_series_uncalibrated(self):
         with tempfile.TemporaryDirectory() as temp:

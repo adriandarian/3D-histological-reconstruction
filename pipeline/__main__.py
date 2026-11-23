@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from .phantom import generate
+from .contours import refine_exposed_tips
 from .deformation import displacement_grids, pixel_grid, to_source
 
 
@@ -224,7 +225,7 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
         ]
         valid_images = [warp(valid_frame, m, 0, cv2.INTER_NEAREST) for m in transforms]
         he_channels = None
-        if local == "he":
+        if local in ("he", "he-contour"):
             he_channels = [
                 [
                     warp(im[:, :, channel].astype(np.float32), m, 255).astype(np.uint8)
@@ -254,12 +255,17 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
                 grid *= 0.5
                 if np.max(np.abs(grid)) < 0.01:
                     grid.fill(0)
+        stack.append(registered)
+        validity.append(valid)
+    if local == "he-contour":
+        refine_exposed_tips(images, transforms, grids, stack, validity)
+    for i, (im, matrix, registered, valid) in enumerate(
+        zip(images, transforms, stack, validity)
+    ):
         hsv = cv2.cvtColor(registered, cv2.COLOR_RGB2HSV)
         mask = (
             ((hsv[:, :, 1] > 18) & (hsv[:, :, 2] < 250)) | (hsv[:, :, 2] < 170)
         ) & valid.astype(bool)
-        stack.append(registered)
-        validity.append(valid)
         masks.append(mask)
         entry = dict(
             index=i,
@@ -270,7 +276,7 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
             **qa[i],
         )
         if local:
-            entry["pullGrid"] = grid.tolist()
+            entry["pullGrid"] = grids[i].tolist()
         for key, asset_pixels in (
             ("source", im),
             ("registered", registered),
@@ -309,7 +315,7 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
         else "Adjacent translation search and rigid ECC refinement to middle section",
     )
     if local:
-        manifest["localRefinement"] = "he" if local == "he" else "intensity"
+        manifest["localRefinement"] = "intensity" if local is True else local
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2, allow_nan=False), encoding="utf8"
     )
@@ -331,9 +337,9 @@ def main():
     parser.add_argument(
         "--local-refinement",
         nargs="?",
-        choices=("intensity", "he"),
+        choices=("intensity", "he", "he-contour"),
         const="intensity",
-        help="Apply local refinement using intensity (default) or H&E color channels",
+        help="Apply local refinement using intensity (default), H&E color channels, or H&E plus exposed-tip matching",
     )
     args = parser.parse_args()
     if args.max_side < 16:

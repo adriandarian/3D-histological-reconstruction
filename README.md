@@ -21,17 +21,17 @@ Open the local URL printed by Vite. Drag the stack to rotate it, move the sectio
 
 ```sh
 python scripts/download_real.py
-python -m pipeline --input data/real --output public/data/real --local-refinement he --name "Pancreas · 10x" --attribution "Roy, Gupta and Goswami (2023), DOI 10.17632/fzskwpzs5j.1, CC BY 4.0"
+python -m pipeline --input data/real --output public/data/real --local-refinement he-contour --name "Pancreas · 10x" --attribution "Roy, Gupta and Goswami (2023), DOI 10.17632/fzskwpzs5j.1, CC BY 4.0"
 ```
 
-Select **Real histology** in the viewer. This export uses preview pixels for XY and section indices for depth. Original TIFFs and generated exports stay local. See [data provenance and ordering](docs/DATA.md).
+Select **Real histology** in the viewer. The pancreas example refines H&E color alignment around matched tissue tips at the slide background. This export uses preview pixels for XY and section indices for depth. Original TIFFs and generated exports stay local. See [data provenance and ordering](docs/DATA.md).
 
 ## Inspect an export
 
 Each output directory must be new or empty. To process your own series, pass a directory of single-frame images from one block and one magnification to `--input`. Filenames must share a pattern with one varying numeric field that supplies the order. Use `--max-side` to set the maximum preview dimension.
 
 - `manifest.json` links each input filename to its preview, registered image and masked 3D texture. The 2-by-3 matrix maps source pixels into the rigid frame, with X increasing right and Y increasing down.
-- With `--local-refinement he` (H&E color) or `--local-refinement intensity` (grayscale), each section also exports a bilinear `pullGrid` sampled across the registered image, including both endpoints. At registered pixel `p`, the corresponding rigid-frame point is `p + grid(p)`. Section images, 3D textures and the linked cursor use the same mapping. Omit the flag to reproduce rigid registration.
+- With local refinement (`intensity`, `he`, or `he-contour`), each section also exports a bilinear `pullGrid` sampled across the registered image, including both endpoints. At registered pixel `p`, the corresponding rigid-frame point is `p + grid(p)`. Section images, 3D textures and the linked cursor use the same mapping. Omit the flag to reproduce rigid registration.
 - `volume.npz` contains registered RGB samples in Z,Y,X,channel order and separate tissue and valid-pixel masks in Z,Y,X order. The mask uses color thresholds. It can include artifacts and miss pale tissue.
 - Registration searches for adjacent translations, refines them with bounded rigid rotation, and composes accepted transforms toward the middle reference section. Inspect the status and before/after correlation of each pair. An identity fallback inherits the fixed section's transform. Chaining can accumulate drift, and rigid registration cannot correct tears or local distortion.
 - The 3D display samples the section planes. Missing tissue between samples, anatomical boundaries and physical depth require independent evidence.

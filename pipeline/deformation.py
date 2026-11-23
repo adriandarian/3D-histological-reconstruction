@@ -105,18 +105,24 @@ def displacement_grids(images, valid, reference, *, he_channels=None):
     # A contraction makes the inverse unique. Bound the Frobenius norm of
     # the bilinear displacement derivative, including inside each grid cell.
     for field in result:
-        sx = (
-            np.max(np.linalg.norm(np.diff(field, axis=1), axis=2))
-            * (size[0] - 1)
-            / (w - 1)
-        )
-        sy = (
-            np.max(np.linalg.norm(np.diff(field, axis=0), axis=2))
-            * (size[1] - 1)
-            / (h - 1)
-        )
-        field /= max(1.0, np.hypot(sx, sy) / 0.6)
+        field /= max(1.0, gradient_bound(field, w, h) / 0.6)
     return result
+
+
+def gradient_bound(field, width, height):
+    """Upper bound for the bilinear displacement derivative over all cells."""
+    rows, cols = field.shape[:2]
+    sx = (
+        np.max(np.linalg.norm(np.diff(field, axis=1), axis=2))
+        * (cols - 1)
+        / (width - 1)
+    )
+    sy = (
+        np.max(np.linalg.norm(np.diff(field, axis=0), axis=2))
+        * (rows - 1)
+        / (height - 1)
+    )
+    return np.hypot(sx, sy)
 
 
 def pixel_grid(width, height):

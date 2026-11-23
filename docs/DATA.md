@@ -6,7 +6,7 @@ From the project root, with the Python dependencies installed, run
 
 ```shell
 python scripts/download_real.py
-python -m pipeline --input data/real --output public/data/real --local-refinement he --name "Pancreas 10x" --attribution "Bijoyeta Roy; contributors M. Gupta and B. Goswami. Mendeley Data v1 (2023), doi:10.17632/fzskwpzs5j.1, CC BY 4.0. Downsampled and registered."
+python -m pipeline --input data/real --output public/data/real --local-refinement he-contour --name "Pancreas 10x" --attribution "Bijoyeta Roy; contributors M. Gupta and B. Goswami. Mendeley Data v1 (2023), doi:10.17632/fzskwpzs5j.1, CC BY 4.0. Downsampled and registered."
 ```
 
 The download requires about 110 MB. It checks the publisher's SHA-256 digest for each TIFF, including existing copies. The pipeline reads section numbers 1 through 36 from the leading filename field. All 36 source images decode as RGB at 1280 × 960 pixels. The untouched TIFFs stay in `data/real/`. Exported previews, registration transforms and masked textures are derived material.
@@ -39,29 +39,31 @@ Visual review covered pairs 1/2, 4/5, 8/9, 12/13, 16/17, 19/20, 23/24, 27/28, 31
 
 The documented pancreas command adds an image-only correction after rigid registration. Forward and backward optical flow estimate local motion between adjacent sections. The solver smooths reliable correspondences onto a sparse grid and limits deformation to keep the mapping invertible. The reference plane and adjacent rigid pairs with correlation above 0.98 retain their rigid transforms.
 
-Both local modes use the rigid frame and its validity masks. The earlier intensity mode estimates flow from grayscale previews. The H&E mode estimates broad shifts by dense inverse search on the red channel and smaller shifts by a 17-pixel Farneback window on the green channel. Each estimate is weighted spatially by forward/backward consistency, then normalized. The solver combines the two displacements with a 2:1 weight on the broad estimate. The channel, estimator and weight were selected by comparing results on this series.
+All local modes use the rigid frame and its validity masks. The earlier intensity mode estimates flow from grayscale previews. The H&E mode estimates broad shifts by dense inverse search on the red channel and smaller shifts by a 17-pixel Farneback window on the green channel. Each estimate is weighted spatially by forward/backward consistency, then normalized. The solver combines the two displacements with a 2:1 weight on the broad estimate. The channel, estimator and weight were selected by comparing results on this series.
+
+The `he-contour` mode starts from the H&E export and detects protruding tissue tips along bright glass connected to the valid image boundary. Two passes match 73-by-73 grayscale patches in both directions between nearby, mutually nearest tips. Each accepted match adjusts the pull grid locally. The reference and zero-displacement planes stay fixed. Each update must preserve the displacement-gradient bound and at least 70% valid field. Each pass resamples the original section.
 
 The eight manual correspondences span four adjacent pairs. The coordinates are unchanged and the pipeline reads images alone. All eight were available during method selection, so these are development measurements. Errors are Euclidean distances in the registered 640 by 480 preview.
 
-| Pair and landmark | Rigid (px) | Previous intensity (px) | H&E color (px) |
-| --- | ---: | ---: | ---: |
-| 1/2, original margin notch | 20.9 | 16.9 | 13.8 |
-| 16/17, original stromal tongue | 10.9 | 5.9 | 10.6 |
-| 35/36, original stromal band | 20.9 | 19.5 | 17.5 |
-| **Original three, mean** | **17.6** | **14.1** | **14.0** |
-| 1/2, curved septum tip | 16.4 | 10.1 | 3.6 |
-| **16/17, lower branch junction** | **7.6** | **11.1** | **6.5** |
-| **35/36, septum and band junction** | **24.0** | **25.5** | **23.3** |
-| 35/36, outer margin notch | 9.2 | 7.8 | 5.2 |
-| 23/24, projecting loop apex | 8.9 | 4.9 | 3.3 |
-| **Additional five, mean** | **13.2** | **11.9** | **8.4** |
+| Pair and landmark | Rigid (px) | Previous intensity (px) | H&E color (px) | H&E + tip matching (px) |
+| --- | ---: | ---: | ---: | ---: |
+| 1/2, original margin notch | 20.9 | 16.9 | 13.8 | 13.8 |
+| 16/17, original stromal tongue | 10.9 | 5.9 | 10.6 | **5.2** |
+| 35/36, original stromal band | 20.9 | 19.5 | 17.5 | 17.5 |
+| **Original three, mean** | **17.6** | **14.1** | **14.0** | **12.2** |
+| 1/2, curved septum tip | 16.4 | 10.1 | 3.6 | 3.6 |
+| **16/17, lower branch junction** | **7.6** | **11.1** | **6.5** | **6.5** |
+| **35/36, septum and band junction** | **24.0** | **25.5** | **23.3** | **23.3** |
+| 35/36, outer margin notch | 9.2 | 7.8 | 5.2 | 5.2 |
+| 23/24, projecting loop apex | 8.9 | 4.9 | 3.3 | 1.4 |
+| **Additional five, mean** | **13.2** | **11.9** | **8.4** | **8.0** |
 
-Seven points improved over the intensity export. The stromal tongue on 16/17 increased by 4.7 pixels even as the branch junction on that same pair improved. Mean grayscale correlation on common valid pixels decreased from 0.340 to 0.336 across the 35 adjacent pairs (12 improved, one unchanged, 22 worse). Minimum retained field was 71.2%. The ten distributed overlays still show mismatched tissue margins and cropping. Repeat annotations, an independent series and expert adjudication remain open.
+Tip matching reduced the tongue error on 16/17 by 5.4 pixels and the projecting loop error on 23/24 by 1.8 pixels. The other six landmarks, including both junctions, mapped to identical coordinates before and after tip matching. Neither landmark CSV changed. Across all 35 adjacent pairs, mean grayscale correlation on common valid pixels rounded to 0.337 for both H&E exports (9 improved, 17 unchanged within 0.00001, 9 declined). Minimum retained field was 71.2%. The ten distributed overlays still show mismatched tissue margins and cropping. Repeat annotations, an independent series and expert adjudication remain open.
 
-To reproduce the previous result, repeat the download and export command above with `--local-refinement intensity` and a fresh output path. The bare `--local-refinement` flag also selects intensity. Omitting the flag produces the rigid baseline. Compare exports and score the two landmark files with:
+To reproduce the previous result, repeat the download and export command above with `--local-refinement he` and a fresh output path. The bare `--local-refinement` flag also selects intensity. Omitting the flag produces the rigid baseline. Compare exports and score the two landmark files with:
 
 ```sh
-python scripts/compare_registration.py path/to/intensity/manifest.json public/data/real/manifest.json
+python scripts/compare_registration.py path/to/he/manifest.json public/data/real/manifest.json
 python scripts/landmark_error.py public/data/real/manifest.json docs/pancreas_landmarks.csv
 python scripts/landmark_error.py public/data/real/manifest.json docs/pancreas_check_landmarks.csv
 ```
