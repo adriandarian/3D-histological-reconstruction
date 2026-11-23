@@ -1,4 +1,4 @@
-﻿# Project guide
+# Project guide
 
 Section Atlas investigates whether the same biological structure can be followed through depth. A source image, an aligned volume, a segmented surface, and an independently supported connection answer different questions. To inspect a claim, start with its case report and follow the links to its images, labels, and validation results.
 
@@ -10,7 +10,8 @@ Section Atlas investigates whether the same biological structure can be followed
 | Branching duct phantom | 32 simulated sections on a 2 × 2 × 5 µm grid. [Report](VOLUME_RECONSTRUCTION.md) and [reference and recovered graphs](../public/branching/validation.json) | Image segmentation recovers the known bifurcation and both tips, with Dice 0.9923. Removing a section breaks the graph. |
 | Roy pancreas | 36 H&E sections. [Dataset and registration review](DATA.md), [held-out landmarks](pancreas_frozen_landmarks.csv), and [cavity results](../public/pancreas/validation.json) | A bright connected candidate persists across retained sections 6–15. Its anatomical identity, physical spacing, and intervening tissue remain unknown. Three held-out landmarks have a mean residual of 14.1 preview pixels. |
 | H01 cortical capillary V1 | 32 consecutive registered EM planes, 600–631. [Case report](H01_CAPILLARY.md) and [per-plane and per-link results](../public/capillary/validation.json) | Published human-corrected annotations support the main lumen over 31 transitions at matching IoU 0.50. A stationary seed retains those same links. The trace introduces 21 extra links relative to the principal lumen. The window contains no reference bifurcation. |
-| Real bifurcation | [Branch selection, daughter identities, and validation](REAL_BIFURCATION.md) | Consult the case report for the source sections, independence of the reference, daughter-specific results, and unresolved links. |
+| FAFB neuronal bifurcation | 25 consecutive EM sections, independent manual centerlines and a published FFN instance. [Case report](REAL_BIFURCATION.md) | Both named daughters have supported paths from the parent and separate profiles on sections 4708?4715. Repeating the parent mask fails to split. |
+| H01 vascular fork candidate | 48 registered EM planes, a coarse manual atlas and blinded AI visual landmarks. [Evidence and uncertainty](H01_VASCULAR_FORK.md) | Both marked profiles remain distinct on 20 planes. The reader withheld 15 transitional planes. The precise lumen junction remains unresolved. |
 | CODA lung | 20 retrieved slides from one series with scanner XY calibration and a nominal 10 µm interval. [Acquisition record](CODA_LUNG.md) and [file inventory](../scripts/coda_lung_sources.csv) | The first slide in this window has published anatomical outlines. The other 19 require correspondence review before they can support a continuity claim. |
 
 BigBrain was investigated as another calibrated source. The original proposal also discusses RAPID, ANHIR, ACROBAT, larger whole-slide series, and multiscale storage. Their appearance in the planning document records a research direction. [Calibrated dataset investigation](VOLUME_RECONSTRUCTION.md#calibrated-serial-section-acquisition) · [Original POC plan](POC_PLAN.md)
@@ -49,4 +50,4 @@ The browser manifests list **dimensions and spacing in XYZ order**. Raw volume b
 | [PR 2](https://github.com/adriandarian/3D-histological-reconstruction/pull/2) | Build-time installation of versioned, checksum-verified demo archives. |
 | [PR 3](https://github.com/adriandarian/3D-histological-reconstruction/pull/3) | GPU ray marching, reslices, arbitrary clipping, labeled meshes, synthetic branch validation, and exploratory pancreas continuity. |
 | [PR 4](https://github.com/adriandarian/3D-histological-reconstruction/pull/4) | Seeded tracing of a real capillary against withheld published masks, per-link scoring, a stationary-seed control, and CODA acquisition. |
-| [Real bifurcation study](REAL_BIFURCATION.md) | Source-linked investigation of a parent and its two daughters. |
+| [PR 5](https://github.com/adriandarian/3D-histological-reconstruction/pull/5) | Named neuronal bifurcation, companion vascular fork study, point-by-point daughter navigation, and the integrated project guide. |

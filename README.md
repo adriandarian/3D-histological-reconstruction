@@ -4,7 +4,9 @@ Section Atlas reconstructs structures from serial tissue sections and links each
 
 The [project guide](docs/PROJECT_GUIDE.md) indexes every experiment, its data and units, reproduction commands, validation evidence, and development history. For the two-daughter experiment, start with the [real bifurcation study](docs/REAL_BIFURCATION.md).
 
-![Ray-marched phantom with a reconstructed bifurcation and highlighted source section](docs/volume.webp)
+Open `?dataset=bifurcation` in the built app to follow both daughters of a manually traced fly projection neuron. The mesh resolves distinct daughter profiles on eight consecutive EM sections. A separate human cortical vascular candidate is available at `?dataset=vascular-fork`. [Vascular evidence and unresolved junction](docs/H01_VASCULAR_FORK.md)
+
+![Measured EM sections with the predicted neuronal boundary and independent daughter annotations](docs/fafb-daughters.png)
 
 ## Real capillary validation
 
