@@ -64,7 +64,7 @@ function flat(array) {
   return Array.isArray(array[0]) ? array.flat() : array;
 }
 
-export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, uncertain}, onPick) {
+export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, uncertain, frameAnatomy}, onPick) {
   const [nx, ny, nz] = dimensions;
   if (rgba.length !== nx * ny * nz * 4 || labels.length !== nx * ny * nz)
     throw new Error("Volume buffer size differs from its dimensions.");
@@ -166,6 +166,13 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
     camera.up.set(0,0,1);
     camera.position.set(.65,-1.9,.75).multiplyScalar(Math.max(1,1/camera.aspect));
     controls.target.set(0,0,0);
+    if (frameAnatomy && anatomy) {
+      anatomy.geometry.computeBoundingSphere();
+      const bounds = anatomy.geometry.boundingSphere;
+      controls.target.copy(bounds.center);
+      const distance = 1.15 * bounds.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2));
+      camera.position.set(.65, -1.4, 1.2).setLength(distance * Math.max(1,1/camera.aspect)).add(bounds.center);
+    }
     controls.update();
     render();
   }

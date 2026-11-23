@@ -1,4 +1,4 @@
-﻿# Tracing one human cortical capillary through serial EM
+# Tracing one human cortical capillary through serial EM
 
 **The published lumen of capillary V1 can be followed across 32 consecutive registered H01 image planes.** Starting with the author's label on plane 600, the image-guided trace localized the main lumen on every subsequent plane through 631. An unchanged copy of the first outline also retained that connectivity. This is evidence for the identity and local continuity of this vessel segment. Its short, nearly axial course makes it a weak test of tracking accuracy and provides no positive test of bifurcation recovery.
 
@@ -40,6 +40,8 @@ The unmoved seed also recovered 31 of 31 principal links. Tightening the IoU thr
 Both image and reference use the H01 registration. Agreement between them cannot establish absolute registration accuracy. We spot-checked two features outside the seeded lumen on each of three adjacent pairs (606/607, 620/621, 630/631). The six manually estimated displacements ranged from 0 to 2 display pixels, within the exploratory four-pixel tolerance. Three local checks passed, none failed, and 28 intervals have unknown registration accuracy. True biological change and pointing error both contribute to these distances. Horizontal image bands and changing ultrastructure are visible in the crops. Exact displacement, physical shrinkage and microscopic branches below display resolution remain unresolved. [Landmark coordinates](h01_local_checks.csv)
 
 Choose **H01 cortical capillary** in the volume explorer, or open the app with `?dataset=capillary`. Select the mesh to see the registered EM crop with the traced and published contours, section number, matched-region IoU, and next-pair evidence. Links open the measured crop, its native H01 location, and the exact original annotation TIFF. The packaged PNGs reproduce the area-averaged registered raster and carry no baked-in overlays.
+
+![H01 V1 mesh and linked registered source plane 615](h01-viewer.webp)
 
 ### Reproduction and attribution
 

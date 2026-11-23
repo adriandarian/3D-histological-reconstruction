@@ -282,7 +282,7 @@ async function load() {
     try {
       renderer=createRayVolume(element("ray-host"),{
         dimensions,spacing,rgba,labels:anatomy,uncertain,
-        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}
+        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary
       },(x,y,z)=>{element("overlay").checked=true;select([x,y,z]);});
       controls.disabled=false;
       renderSettings();
@@ -292,7 +292,8 @@ async function load() {
     }
     const z = capillary ? 0 : real ? 9 : Math.floor(dimensions[2]/2);
     const area = dimensions[0] * dimensions[1];
-    const firstLabel = labels.subarray(z*area,(z+1)*area).indexOf(2);
+    const firstLabel = labels.subarray(z*area,(z+1)*area).findIndex(
+      (value,i) => value === 2 && !current.uncertain?.[z*area+i]);
     select(firstLabel < 0
       ? [Math.floor(dimensions[0]/2), Math.floor(dimensions[1]/2), z]
       : [firstLabel % dimensions[0], Math.floor(firstLabel/dimensions[0]), z]);
