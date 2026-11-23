@@ -21,3 +21,7 @@ Use the existing planar four-connectivity and adjacent voxel-face contact scorer
 Sweep post-registration image correlation gates of none, 0.60, 0.90 and 0.97, with and without requiring both neighboring planes to be measured. Retain raw errors before abstention, accepted-interval errors, rejected reference links, and branch coverage. Correlation is a similarity statistic, not a probability of correct anatomy.
 
 Display clean, dilation, missing-section and combined stress configurations for the first listed seed regardless of outcome. Report all other seeds in machine-readable tables. Seed ranges describe this simulator only; the study cannot estimate clinical reliability, validate a real H&E connection or measure reader benefit.
+
+### Field-boundary challenge added before execution
+
+Also omit planes 9 through 15 inclusive. This deliberately brackets the disappearance of family 6 and arrival of unrelated family 7. For each reconstruction label its six-connected 3D components. Count distinct family pairs for which one component covers at least 25% of a cross-section of each family anywhere in the volume. Record the specific 6/7 join separately. This captures a long false path even when no single adjacent link matches two different reference identities. Figure panels for this additional case use the same first seed.
