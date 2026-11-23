@@ -4,6 +4,10 @@ Reconstruct and explore a branching duct from serial sections. The WebGL2 volume
 
 ![Ray-marched phantom with a reconstructed bifurcation and highlighted source section](docs/volume.webp)
 
+## Real capillary validation
+
+Select **H01 cortical capillary** in the volume explorer (or append `?dataset=capillary` to the app URL). Inspect a seeded lumen trace against published, human-corrected annotations on 32 consecutive registered serial EM planes. The viewer links every prediction to its measured image, its position in H01 and the source label TIFF. All 31 main-lumen links survived at IoU 0.50. There were also 21 extra links relative to that reference graph. [Validation report, controls and reproduction](docs/H01_CAPILLARY.md)
+
 ## Run the published demo
 
 From a clean checkout, use Node.js 22.16 or newer and a system `tar` command.
