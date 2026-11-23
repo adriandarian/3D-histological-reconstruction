@@ -12,6 +12,8 @@ Open `?dataset=bifurcation` in the built app to follow both daughters of a manua
 
 ![Measured EM sections with the predicted neuronal boundary and independent daughter annotations](docs/fafb-daughters.png)
 
+The [TCIA prostate experiment](docs/tcia-prostate/README.md) tests six-level tumor reconstruction against two withheld pathologist contours. The interpolated extent missed nearly all annotated tumor on both levels. Open `?dataset=tcia-prostate` to compare prediction and reference.
+
 ## Real capillary validation
 
 Select **H01 cortical capillary** in the volume explorer (or append `?dataset=capillary` to the app URL). Inspect a seeded lumen trace against published, human-corrected annotations on 32 consecutive registered serial EM planes. The viewer links every prediction to its measured image, its position in H01 and the source label TIFF. All 31 main-lumen links survived at IoU 0.50. There were also 21 extra links relative to that reference graph. [Validation report, controls and reproduction](docs/H01_CAPILLARY.md)

@@ -124,6 +124,7 @@ function drawSource() {
   }
   if (element("overlay").checked) contour(current.labels, 2, "#ffb600");
   if (current.reference && element("reference-overlay").checked) contour(current.reference, 1, "#00dcf6");
+  if (current.tumorReference && element("reference-overlay").checked) contour(current.tumorReference, 1, "#00dcf6");
   if (current.uncertain && element("overlay").checked) contour(current.uncertain, 1, "#ff2592");
   if (current.trace && element("point-overlay").checked)
     drawTrace(ctx, project, current.trace.planes[z].points);
@@ -148,6 +149,12 @@ function drawSource() {
     }
     const native = [x, y].map((v, i) => Math.floor(section.origin[i] + v * section.step));
     element("source-readout").textContent = `${section.slide} · Level-zero X ${native[0]}, Y ${native[1]} px · Nominal depth ${z * current.spacing[2]} µm`;
+  }
+  if (current.prostateFrames) {
+    const frame = current.prostateFrames[z];
+    const native = [x,y].map((v,i) => Math.floor(frame.origin[i]+v*frame.extent[i]/current.dimensions[i]));
+    const role = [1,3].includes(z) ? "withheld level · interpolated tumor" : "pathologist contour anchor";
+    element("source-readout").textContent = `${frame.file} · ${role} · Native X ${native[0]}, Y ${native[1]} px`;
   }
   if (current.reference) {
     const role = z === 0 ? "Author seed" : "Held-out comparison";
@@ -287,6 +294,8 @@ async function load() {
     if(signal.aborted) return;
     const rgb=new Uint8Array(rgbBuffer), labels=new Uint8Array(labelBuffer);
     const {dimensions}=manifest;
+    const tumorReference = manifest.prostateFrames ? new Uint8Array(await asset("held-out.bin","arrayBuffer")) : null;
+    if (signal.aborted) return;
     const count=dimensions.reduce((a,b)=>a*b,1);
     if (fork && (trace.planes.length !== dimensions[2] || validation.planes.length !== dimensions[2] ||
         trace.planes.some((p,i) => p.z !== validation.planes[i].z)))
@@ -303,7 +312,7 @@ async function load() {
     // Uncalibrated sections use unitless index coordinates on every axis.
     const spacing=manifest.spacing || [1,1,1];
     current={...manifest,base,realBase:coda ? base : realBase,
-      registration:coda ? {sections:manifest.sourceSections} : registration,rgb,labels,dimensions,spacing,reference,validation,uncertain,trace};
+      registration:coda ? {sections:manifest.sourceSections} : registration,rgb,labels,dimensions,spacing,reference,validation,uncertain,trace,tumorReference};
     if (fork) {
       element("point-control").hidden = false;
       element("fork-evidence").hidden = false;
@@ -339,6 +348,11 @@ async function load() {
       status.textContent = "CODA lung · Bronchiole region 3 on slide 001. Gold follows a candidate airspace through 20 retained slides at nominal 10 µm intervals. Orange marks the AI reader’s source point. Some outlines spill into neighboring airspaces. Connections between cuts and later contours lack expert confirmation.";
     }
     if (fork) status.textContent = `${manifest.caseDescription} Display spacing ${spacing.join(" × ")} µm (X, Y, Z). Gold outlines the reconstruction. Rings mark reference points on each measured section.`;
+    if (manifest.prostateFrames) {
+      element("reference-control").hidden = false;
+      element("source-heading").textContent = "Normalized H&E section";
+      status.textContent = "TCIA aaa0051 · Gold shows pathologist outlines at B, D, F and G and estimated tumor at C and E. Cyan shows the withheld pathologist contours on C and E. Organ dimensions are normalized and depth is exaggerated for display. Data: Madabhushi & Feldman (2016), doi:10.7937/K9/TCIA.2016.TLPMR1AM, CC BY 3.0.";
+    }
     try {
       renderer=createRayVolume(element("ray-host"),{
         dimensions,spacing,rgba,labels:anatomy,uncertain,
