@@ -2,6 +2,8 @@
 
 Section Atlas reconstructs structures from serial tissue sections and links each selected surface point to its source image. The WebGL2 workspace provides volume rendering, labeled surfaces, orthogonal reslices, clipping, and independent comparison against source annotations where available.
 
+**Project north star:** [GOAL.md](GOAL.md) defines the scientific mission, current evidence, deployment status, validation requirements, and milestone gates. Start there to distinguish a convincing 3D visualization from trustworthy, independently supported histological anatomy.
+
 The research goal is to determine whether serial H&E slides can establish which tissue structures connect and whether access to the reconstruction improves a reader's judgment. The [research direction](docs/RESEARCH_DIRECTION.md) defines the next H&E experiment and a comparison with conventional serial-slide review.
 
 The [project guide](docs/PROJECT_GUIDE.md) indexes every experiment, its data and units, reproduction commands, validation evidence, and development history. For the two-daughter experiment, start with the [real bifurcation study](docs/REAL_BIFURCATION.md).
