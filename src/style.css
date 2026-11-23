@@ -248,3 +248,29 @@ article footer { overflow-wrap: anywhere; }
     height: 320px;
   }
 }
+
+#reconstruction { margin: 22px 0 36px; }
+#reconstruction > .panel-head { padding-inline: 0; }
+.volume-layout { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+#ray-host, .source-image { height: clamp(220px, 36vh, 440px); background: #21302c; display: grid; place-items: center; color: #fff; }
+#ray-host canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.source-image canvas, .reslices canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+.source-image canvas { width: auto; height: 100%; }
+#volume-controls, .clip-controls { margin: 4px 16px 12px; padding: 10px; border: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 14px; }
+#reconstruction label, .clipping, #volume-status, .reslices figcaption, #volume-controls legend { font-size: 13px; }
+#volume-controls input[type=range], .clip-controls input[type=range] { width: 76px; vertical-align: middle; }
+.clipping { margin: 8px 16px 16px; }
+.clipping summary { cursor: pointer; }
+.clip-controls { margin: 8px 0 0; }
+.reslices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.reslices figure { margin: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: white; }
+.reslices figure > div { display: flex; align-items: center; justify-content: center; height: clamp(130px, 16vw, 225px); padding: 6px; background: #21302c; }
+.reslices label, .reslices figcaption { display: block; padding: 8px 12px; }
+.reslices canvas { object-fit: fill; cursor: crosshair; image-rendering: pixelated; }
+#volume-status { color: #476055; line-height: 1.5; }
+@media(max-width:720px) {
+  .volume-layout { grid-template-columns: 1fr; }
+  .reslices { gap: 4px; }
+  .reslices figure > div { height: 95px; }
+  .reslices label, .reslices figcaption { padding: 5px; }
+}

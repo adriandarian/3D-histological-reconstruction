@@ -4,6 +4,8 @@
 **Document status:** Research-backed implementation proposal, 2026-11-22  
 **Scope:** Research/engineering visualization POC only; not validated for diagnosis, clinical decisions, or patient care.
 
+The [volumetric reconstruction milestone](VOLUME_RECONSTRUCTION.md) records the implemented viewer, synthetic connectivity validation, held-out slide landmarks and calibrated data acquisition investigation. The proposal below preserves the original design context.
+
 ## 0. Executive summary
 
 **Goal:** Turn a physically ordered collection of 2D histology sections from the **same tissue block** into a browsable 3D tissue volume. Provide a synchronized 2D view familiar to a digital pathology engineer (OpenSeadragon) and an interactive 3D view (Three.js / a reference volume viewer). Distinguish actual stained/scanned sections from algorithmically warped, interpolated, or predicted content.

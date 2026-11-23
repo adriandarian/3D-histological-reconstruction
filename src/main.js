@@ -1,4 +1,5 @@
-﻿import OpenSeadragon from "openseadragon";
+import { pullAt } from "./coordinates.js";
+import OpenSeadragon from "openseadragon";
 import { createVolume } from "./volume.js";
 import "./style.css";
 
@@ -36,22 +37,13 @@ function mountExplorer(root) {
     return new DOMMatrix([a, b, c, d, e, f]);
   }
   // The pull grid maps a displayed point to its position in the rigid frame.
-  function pullAt(point, grid) {
-    const rows = grid.length, cols = grid[0].length;
-    const u = Math.max(0, Math.min(1, point.x / (data.width - 1))) * (cols - 1);
-    const v = Math.max(0, Math.min(1, point.y / (data.height - 1))) * (rows - 1);
-    const i = Math.min(cols - 2, Math.floor(u)), j = Math.min(rows - 2, Math.floor(v));
-    const fx = u - i, fy = v - j;
-    return [0, 1].map(k => (1-fy)*((1-fx)*grid[j][i][k] + fx*grid[j][i+1][k])
-                           + fy*((1-fx)*grid[j+1][i][k] + fx*grid[j+1][i+1][k]));
-  }
   function registeredPoint(point) {
     const rigid = sectionTransform().transformPoint(point);
     const grid = data.sections[index].pullGrid;
     if (!grid || ui.frame.value !== "source") return rigid;
     let aligned = rigid;
     for (let step = 0; step < 24; step++) {
-      const [dx,dy] = pullAt(aligned, grid);
+      const [dx,dy] = pullAt(aligned, grid, data.width, data.height);
       const next = {x: rigid.x - dx, y: rigid.y - dy};
       if (Math.hypot(next.x-aligned.x, next.y-aligned.y) < 0.001) return next;
       aligned = next;
@@ -65,7 +57,7 @@ function mountExplorer(root) {
       return;
     }
     const grid = data.sections[index].pullGrid;
-    const [dx, dy] = grid && ui.frame.value === "source" ? pullAt({x,y}, grid) : [0,0];
+    const [dx, dy] = grid && ui.frame.value === "source" ? pullAt({x,y}, grid, data.width, data.height) : [0,0];
     const source = sectionTransform().inverse().transformPoint({ x: x+dx, y: y+dy });
     const point = viewer.viewport.pixelFromPoint(
       image.imageToViewportCoordinates(source.x, source.y),
@@ -212,3 +204,4 @@ const linkedDataset = new URLSearchParams(location.search).get("dataset");
 if (linkedDataset === "real" || linkedDataset === "synthetic") {
   document.getElementById(linkedDataset).scrollIntoView({block: "start"});
 }
+import "./reconstruction.js";
