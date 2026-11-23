@@ -1,0 +1,96 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Section Atlas · Histology reconstruction</title>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="logo" aria-hidden="true">▱<i>▱</i><b>▱</b></span
+        >Section Atlas
+      </div>
+      <span class="header-note">Histology reconstruction</span>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <p class="eyebrow">Reconstruction workspace</p>
+          <h1>Serial section explorer</h1>
+        </div>
+        <label class="dataset"
+          >Dataset<select id="dataset">
+            <option value="synthetic">Synthetic series</option>
+            <option value="real">Real histology</option>
+          </select></label
+        >
+      </div>
+      <p id="status" role="status">Loading series…</p>
+      <div class="views">
+        <section>
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Axial plane</p>
+              <h2>Section view</h2>
+            </div>
+            <select id="frame" aria-label="Section image">
+              <option value="registered">Registered</option>
+              <option value="source">Original</option>
+            </select>
+          </div>
+          <div id="slide">
+            <div id="osd"></div>
+            <span id="cross" aria-hidden="true"></span>
+          </div>
+          <div class="foot">
+            <span>Click to place cursor</span
+            ><span class="tools"
+              ><button id="out" aria-label="Zoom out">−</button
+              ><button id="in" aria-label="Zoom in">+</button
+              ><button id="fit">Fit</button></span
+            >
+          </div>
+        </section>
+        <section>
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Spatial reconstruction</p>
+              <h2>Volume view</h2>
+            </div>
+            <button id="reset">Reset view</button>
+          </div>
+          <div id="volume"></div>
+          <div class="foot">
+            <span>Drag to orbit · Scroll to zoom</span
+            ><span id="scale">Illustrative depth</span>
+          </div>
+        </section>
+      </div>
+      <section class="navigation">
+        <div class="nav-head">
+          <h2>Section navigator</h2>
+          <output id="count" for="section">—</output>
+        </div>
+        <div class="range">
+          <button id="prev" aria-label="Previous section">←</button
+          ><input
+            id="section"
+            aria-label="Section"
+            type="range"
+            min="0"
+            max="0"
+            value="0"
+          /><button id="next" aria-label="Next section">→</button>
+        </div>
+        <div class="details">
+          <span id="coords"></span><span id="quality"></span>
+        </div>
+      </section>
+      <footer>
+        <span id="provenance"></span><span>Research visualization</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

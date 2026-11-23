@@ -1,37 +1,57 @@
-# 3D Histological Reconstruction
+# Section Atlas · 3D histological reconstruction
 
-Research and proof-of-concept workspace for reconstructing **3D tissue volumes from ordered, digitized serial histology sections** and exploring them alongside conventional 2D whole-slide imagery.
+Explore a series of adjacent tissue sections as a rotatable, textured stack and inspect the corresponding section in OpenSeadragon. A standalone Python command registers the images and writes the volume, transforms, QA and viewer assets. The browser reads a static export. Intended for research visualization.
 
-> **Status:** Planning and research only. This repository currently contains a technical POC plan; no processing pipeline or viewer has been implemented or validated. Not for clinical/diagnostic use.
+![Synthetic tissue section and its selected plane in the rotatable stack](docs/explorer.webp)
 
-## Start here
+## Run the synthetic demonstration
 
-**[Read the full proof-of-concept plan](docs/POC_PLAN.md)** for background, datasets, verified research references, architecture, suggested implementation steps, CLI and data-layout conventions, validation criteria, risks, and a phased roadmap.
+From the repository root, use Python 3.11–3.13 in a virtual environment and Node.js 22.16 or newer.
 
-### Proposed first demonstration
+```sh
+python -m pip install -r requirements.txt
+python -m pipeline --output public/data/synthetic
+npm ci
+npm run dev
+```
 
-1. Obtain an openly licensed, **ordered** series of 30–50 tissue sections. Verify section order, spacing, and physical pixel scale rather than assuming them.
-2. Inspect, register, and export the sections as a correctly spaced 3D volume; include registration QA, an unregistered baseline, and provenance.
-3. Display a cross-linked 2D view (OpenSeadragon) and rotatable 3D view (Three.js or an existing volume viewer) with a Z-slice slider and synchronized XY location.
-4. Measure whether reconstruction improves continuity and landmark alignment, rather than judging only by visual smoothness.
-5. Graduate to tiled whole-slide images and chunked OME-Zarr only after the small-data pipeline works.
+Open the local URL printed by Vite. Drag the stack to rotate it, move the section slider, and click in the section to locate that point in 3D. Switch between original and registered images to see the effect of translation. The 36-section phantom uses seeded acquisition offsets and known sampling.
 
-### Starter dataset
+## Run the measured pancreas series
 
-[Serial Section Histopathology Image Dataset (Mendeley Data, CC BY 4.0)](https://data.mendeley.com/datasets/fzskwpzs5j/1): 48 colon and 36 pancreas serial images **at each of two magnifications**, 10× and 40×, as 1280×960 RGB TIFFs. Do not interpret the two magnifications as twice the number of physical cuts. Verify ordering and section spacing from source metadata / authors before claiming real-world Z measurements.
+```sh
+python scripts/download_real.py
+python -m pipeline --input data/real --output public/data/real --name "Pancreas · 10x" --attribution "Roy, Gupta and Goswami (2023), DOI 10.17632/fzskwpzs5j.1, CC BY 4.0"
+```
 
-### Scientific foundations
+Select **Real histology** in the viewer. This export uses preview pixels for XY and section indices for depth. Original TIFFs and generated exports stay local. See [data provenance and ordering](docs/DATA.md).
 
-- [CODA, Nature Methods (2022)](https://www.nature.com/articles/s41592-022-01650-9) — large-tissue, cellular-resolution reconstruction from serial histology.
-- [VALIS](https://valis.readthedocs.io/en/stable/) — rigid and nonrigid serial pathology slide registration.
-- [RAPID, Scientific Reports (2026)](https://www.nature.com/articles/s41598-026-46776-4) — robust large-WSI registration, including sparsely sampled slides.
-- [Lila Sciences MOSAIC (2026)](https://www.lila.ai/news/seeing-molecules-from-any-direction) — inspiration for a **future** cross-modal research track, **not** a method for 3D histological reconstruction.
+## Inspect an export
 
-## Principles
+Each output directory must be new or empty. To process your own series, pass a directory of single-frame images from one block and one magnification to `--input`. Filenames must share a pattern with one varying numeric field that supplies the order. Use `--max-side` to set the maximum preview dimension.
 
-- Preserve **measured** versus **interpolated/inferred** data distinctly.
-- Record physical units, missing sections, deformation transforms, and confidence/QA scores.
-- Start CPU-first with public research data. Never commit patient data or proprietary slides.
-- Separate the scientific pipeline from the web viewer; make outputs inspectable in independent tools.
+- `manifest.json` links each input filename to its preview, registered image and masked 3D texture. The source-to-registered shift is in preview pixels, with X increasing right and Y increasing down.
+- `volume.npz` contains registered RGB samples in Z,Y,X,channel order and separate tissue and valid-pixel masks in Z,Y,X order. The mask uses color thresholds. It can include artifacts and miss pale tissue.
+- Registration estimates an adjacent translation toward the middle reference section. Inspect the status and before/after correlation of each pair. An identity fallback inherits the fixed section's shift. Chaining can accumulate drift, and translation cannot correct rotation, tears or local distortion.
+- The 3D display samples the section planes. Missing tissue between samples, anatomical boundaries and physical depth require independent evidence.
 
-See [docs/POC_PLAN.md](docs/POC_PLAN.md) for details.
+Render ten evenly distributed adjacent overlays for review. Red and cyan fringes indicate differences between neighboring sections.
+
+```sh
+python scripts/review_pairs.py public/data/real/manifest.json data/real-review.png
+python scripts/landmark_error.py public/data/real/manifest.json docs/pancreas_landmarks.csv
+```
+
+## Verify and build
+
+```sh
+python -m unittest discover -s tests
+npx playwright install chromium
+npm run test:e2e
+npm run build
+npm run preview
+```
+
+Generate the synthetic export before running browser tests. The real-series test also runs when its export exists. Build after generating the datasets you want to serve. The static output is in `dist/`.
+
+The pipeline holds preview arrays in memory and the viewer loads downsampled textures. Whole-slide ingestion, tiled multiresolution export and chunked 3D access are future work. The [POC plan](docs/POC_PLAN.md) describes the path to larger series and the proposed independent landmark validation.
