@@ -4,6 +4,8 @@ Section Atlas investigates whether the same biological structure can be followed
 
 ## Cases and evidence
 
+The [research direction](RESEARCH_DIRECTION.md) connects these experiments to the proposed H&E continuity study, the 300-section target and the reader comparison.
+
 | Case | Evidence available | What it establishes |
 | --- | --- | --- |
 | Registration phantom | 36 simulated sections with known offsets and sampling. [Generator](../pipeline/phantom.py) and [registration tests](../tests/test_pipeline.py) | Recovery of acquisition motion and mapping between source and registered coordinates. |
