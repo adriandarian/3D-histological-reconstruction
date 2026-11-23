@@ -17,9 +17,52 @@
       <div class="intro">
         <div>
           <p class="eyebrow">Reconstruction workspace</p>
-          <h1>Serial section explorer</h1>
+          <h1>Tissue reconstruction</h1>
         </div>
       </div>
+      <article id="reconstruction" aria-labelledby="volume-title">
+        <div class="panel-head">
+          <h2 id="volume-title">Volume explorer</h2>
+          <label>Series <select id="volume-series">
+            <option value="branching">Branching phantom</option>
+            <option value="pancreas">Pancreas histology</option>
+          </select></label>
+        </div>
+        <div class="volume-layout">
+          <section>
+            <div id="ray-host" aria-label="Interactive 3D volume"></div>
+            <div class="foot"><span>Drag to orbit ? Click anatomy to locate its source</span><button id="ray-reset">Reset view</button></div>
+            <fieldset id="volume-controls">
+              <legend>Volume layers</legend>
+              <label><input type="checkbox" id="histology" checked> Histology</label>
+              <label><input type="checkbox" id="tissue"> Tissue foreground</label>
+              <label><input type="checkbox" id="anatomy" checked> <span id="anatomy-name">Segmented anatomy</span></label>
+              <label>Opacity gain <input id="opacity" type="range" min="0" max="1" step=".01" value=".22"></label>
+              <label>Stain threshold <input id="threshold" type="range" min="0" max="1" step=".01" value=".10"></label>
+            </fieldset>
+            <details class="clipping"><summary>Clipping plane</summary>
+              <div class="clip-controls">
+                <label><input id="clip-enable" type="checkbox"> Enable clipping</label>
+                <label>Azimuth <input id="azimuth" type="range" min="-180" max="180" value="0"></label>
+                <label>Elevation <input id="elevation" type="range" min="-90" max="90" value="0"></label>
+                <label>Offset <input id="clip-offset" type="range" min="-.87" max=".87" step=".01" value="0"></label>
+              </div>
+            </details>
+          </section>
+          <section class="source-panel">
+            <div class="panel-head"><h3>Original section</h3><label><input id="overlay" type="checkbox" checked> Outline label</label></div>
+            <div class="source-image"><canvas id="source-image" aria-label="Original section with selected anatomy outlined"></canvas></div>
+            <div class="foot"><output id="source-readout"></output></div>
+          </section>
+        </div>
+        <div class="reslices">
+          <figure><figcaption><strong>XY</strong> Axial</figcaption><div><canvas id="xy"></canvas></div><label>Section Z <output id="z-value"></output><input id="slice-z" type="range" min="0" value="0"></label></figure>
+          <figure><figcaption><strong>XZ</strong> Coronal</figcaption><div><canvas id="xz"></canvas></div><label>Row Y <output id="y-value"></output><input id="slice-y" type="range" min="0" value="0"></label></figure>
+          <figure><figcaption><strong>YZ</strong> Sagittal</figcaption><div><canvas id="yz"></canvas></div><label>Column X <output id="x-value"></output><input id="slice-x" type="range" min="0" value="0"></label></figure>
+        </div>
+        <p id="volume-status" role="status">Loading reconstruction?</p>
+      </article>
+      <h2 id="comparison">Plane-stack comparison</h2>
       <div class="datasets">
         <article id="synthetic" aria-labelledby="synthetic-title">
           <h2 id="synthetic-title">Synthetic series</h2>
