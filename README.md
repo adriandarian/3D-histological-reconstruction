@@ -4,6 +4,8 @@ Section Atlas reconstructs structures from serial tissue sections and links each
 
 The research goal is to determine whether serial H&E slides can establish which tissue structures connect and whether access to the reconstruction improves a reader's judgment. The [research direction](docs/RESEARCH_DIRECTION.md) defines the next H&E experiment and a comparison with conventional serial-slide review.
 
+The [CODA lung experiment](docs/coda-lung/README.md) follows one publisher-labeled bronchiole through 20 ordinary H&E slides. The report includes all 20 profiles, their native slide coordinates, a registration-only control and instructions to inspect the locally generated 3D trace against the measured images.
+
 The [project guide](docs/PROJECT_GUIDE.md) indexes every experiment, its data and units, reproduction commands, validation evidence, and development history. For the two-daughter experiment, start with the [real bifurcation study](docs/REAL_BIFURCATION.md).
 
 Open `?dataset=bifurcation` in the built app to follow both daughters of a manually traced fly projection neuron. The mesh resolves distinct daughter profiles on eight consecutive EM sections. A separate human cortical vascular candidate is available at `?dataset=vascular-fork`. [Vascular evidence and unresolved junction](docs/H01_VASCULAR_FORK.md)

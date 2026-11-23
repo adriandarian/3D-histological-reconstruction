@@ -136,6 +136,19 @@ function drawSource() {
   ctx.moveTo(x,y-r); ctx.lineTo(x,y+r);
   ctx.stroke();
   element("source-readout").textContent = `Section ${z+1} / ${current.dimensions[2]} · Source X ${Math.round(x-.5)}, Y ${Math.round(y-.5)} px`;
+  if (current.sourceSections) {
+    const section = current.sourceSections[z];
+    if (element("point-overlay").checked) {
+      ctx.beginPath();
+      ctx.arc((section.point[0]-section.origin[0])/section.step,
+        (section.point[1]-section.origin[1])/section.step, 6, 0, Math.PI*2);
+      ctx.strokeStyle="#e05516";
+      ctx.lineWidth=2;
+      ctx.stroke();
+    }
+    const native = [x, y].map((v, i) => Math.floor(section.origin[i] + v * section.step));
+    element("source-readout").textContent = `${section.slide} · Level-zero X ${native[0]}, Y ${native[1]} px · Nominal depth ${z * current.spacing[2]} µm`;
+  }
   if (current.reference) {
     const role = z === 0 ? "Author seed" : "Held-out comparison";
     const fragment = current.uncertain[(z*h+cy)*w+cx] ? " · Unmatched fragment" : "";
@@ -227,6 +240,7 @@ function select(point) {
     const firstIndex = axis === "z" ? (current.reference ? firstH01Section : 1) : 0;
     element(axis+"-value").value=cursor[i]+firstIndex;
     if (axis === "z" && current.trace) element("z-value").value = current.trace.planes[cursor[i]].z;
+    if (axis === "z" && current.sourceSections) element("z-value").value = 2*cursor[i]+1;
   });
   renderer?.select(cursor[2],cursor[0],cursor[1]);
   drawReslices();
@@ -252,7 +266,8 @@ async function load() {
   element("ray-host").textContent="";
   const status=element("volume-status");
   status.textContent="Loading reconstruction…";
-  const base=new URL("./"+series.value+"/manifest.json",document.baseURI);
+  const coda = series.value === "coda-lung";
+  const base=new URL((coda ? "./data/" : "./")+series.value+"/manifest.json",document.baseURI);
   const realBase=new URL("./data/real/manifest.json",document.baseURI);
   const real=series.value==="pancreas";
   const capillary=series.value==="capillary";
@@ -287,7 +302,8 @@ async function load() {
       throw Error("Inconsistent reconstruction dimensions");
     // Uncalibrated sections use unitless index coordinates on every axis.
     const spacing=manifest.spacing || [1,1,1];
-    current={...manifest,base,realBase,registration,rgb,labels,dimensions,spacing,reference,validation,uncertain,trace};
+    current={...manifest,base,realBase:coda ? base : realBase,
+      registration:coda ? {sections:manifest.sourceSections} : registration,rgb,labels,dimensions,spacing,reference,validation,uncertain,trace};
     if (fork) {
       element("point-control").hidden = false;
       element("fork-evidence").hidden = false;
@@ -317,11 +333,16 @@ async function load() {
       status.textContent = `H01 human cerebral cortex · Registered serial electron micrographs. Nominal voxel spacing ${spacing.join(" × ")} µm (X, Y, Z). Gold traces the lumen from the author seed on section 600. Cyan shows the published, human-corrected reference. Later sections were held out for comparison. Magenta marks predicted fragments unmatched to the main lumen. Detached reference islands have uncertain branch identity and are excluded from the link score.`;
     }
     status.textContent+=" The volume interpolates intensities between sections. Reslices show sampled voxels.";
+    if (coda) {
+      element("point-control").hidden = false;
+      element("source-heading").textContent = "Measured H&E crop";
+      status.textContent = "CODA lung · Bronchiole region 3 on slide 001. Gold follows a candidate airspace through 20 retained slides at nominal 10 µm intervals. Orange marks the AI reader’s source point. Some outlines spill into neighboring airspaces. Connections between cuts and later contours lack expert confirmation.";
+    }
     if (fork) status.textContent = `${manifest.caseDescription} Display spacing ${spacing.join(" × ")} µm (X, Y, Z). Gold outlines the reconstruction. Rings mark reference points on each measured section.`;
     try {
       renderer=createRayVolume(element("ray-host"),{
         dimensions,spacing,rgba,labels:anatomy,uncertain,
-        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary || fork
+        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary || fork || coda
       },(x,y,z)=>{element("overlay").checked=true;select([x,y,z]);});
       controls.disabled=false;
       renderSettings();
@@ -338,7 +359,8 @@ async function load() {
       ? [Math.floor(dimensions[0]/2), Math.floor(dimensions[1]/2), z]
       : [firstLabel % dimensions[0], Math.floor(firstLabel/dimensions[0]), z]);
   } catch(error) {
-    if(!signal.aborted) status.textContent="Could not load this reconstruction. "+error.message;
+    if(!signal.aborted) status.textContent="Could not load this reconstruction. "+error.message+
+      (coda ? " Generate the local case with python -m scripts.trace_coda_lung after downloading the slides." : "");
   }
 }
 
@@ -368,5 +390,6 @@ for (const [plane,u,v] of slices) element(plane).onclick=event=>{
 };
 new ResizeObserver(()=>{if(current) drawReslices();}).observe(element("xy").parentElement);
 const requestedSeries = new URLSearchParams(location.search).get("dataset");
+if (requestedSeries === "coda-lung") series.add(new Option("CODA lung bronchiole (local)", "coda-lung"));
 if ([...series.options].some(option => option.value === requestedSeries)) series.value = requestedSeries;
 load();
