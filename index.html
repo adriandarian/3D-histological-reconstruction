@@ -9,7 +9,7 @@
     <header>
       <div class="brand">
         <span class="logo" aria-hidden="true">▱<i>▱</i><b>▱</b></span
-        >Section Atlas
+        Section Atlas
       </div>
       <span class="header-note">Histology reconstruction</span>
     </header>
@@ -29,9 +29,11 @@
             <option value="bifurcation">FAFB neuronal bifurcation</option>
             <option value="vascular-fork">H01 vascular fork candidate</option>
             <option value="tcia-prostate">TCIA prostate tumor extent</option>
+            <option value="coda-lung">CODA lung bronchiole (local only)</option>
             <option value="pancreas">Pancreas histology</option>
           </select></label>
         </div>
+        <p><strong id="evidence-class"></strong> &middot; <a id="case-report" target="_blank" rel="noopener">Case evidence and provenance</a></p>
         <div class="volume-layout">
           <section>
             <div id="ray-host" aria-label="Interactive 3D volume"></div>
@@ -61,7 +63,7 @@
               <label id="point-control" hidden><input id="point-overlay" type="checkbox" checked> Reference points</label>
             </div>
             <div class="source-image"><canvas id="source-image" aria-label="Source image and selected region contours"></canvas></div>
-            <div class="foot"><output id="source-readout"></output></div>
+            <div class="foot"><output id="source-readout"></output><a id="section-image" hidden target="_blank" rel="noopener">Open section image</a></div>
             <div id="capillary-evidence" hidden>
               <p id="pair-evidence"></p>
               <div class="source-links">

@@ -95,3 +95,21 @@ test('a cortical capillary pick links to its measured section and published refe
   await expect(page.locator('#reference-control')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test("pancreas links each registered section to its unwarped source preview", async ({page, request}) => {
+  await page.goto("/?dataset=pancreas");
+  const registration = await (await request.get("/data/real/manifest.json")).json();
+  await expect(page.locator("#evidence-class")).toHaveText("EXPLORATORY H&E");
+  await expect(page.locator("#source-readout")).toContainText(registration.sections[9].filename);
+  for (const z of [10, 9]) {
+    await page.locator("#slice-z").fill(String(z));
+    const section = registration.sections[z];
+    await expect(page.locator("#source-readout")).toContainText(section.filename);
+    await expect(page.locator("#source-readout")).toContainText("Registration: " + section.status);
+    const link = page.locator("#section-image");
+    await expect(link).toBeVisible();
+    const url = new URL(await link.getAttribute("href"));
+    expect(url.pathname).toBe("/data/real/" + section.source);
+    expect((await request.get(url.href)).headers()["content-type"]).toMatch(/^image[/]/);
+  }
+});

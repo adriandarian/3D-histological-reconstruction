@@ -44,6 +44,12 @@ Run the [README demo commands](../README.md#run-the-published-demo) for the comp
 
 The browser manifests list **dimensions and spacing in XYZ order**. Raw volume buffers use Z,Y,X order with X contiguous. RGB samples have three interleaved channels. Mesh coordinates are in voxel-center units. The renderer applies spacing to both the volume and the mesh. For the uncalibrated pancreas, the viewer displays indices. The nominal H01 display spacing describes the published registered grid; distortion and physical cut thickness affect specimen measurements. [Volume format](VOLUME_RECONSTRUCTION.md#reproduce) · [H01 geometry](H01_CAPILLARY.md#geometry-and-reconstruction)
 
+## Availability and review
+
+The integration build includes both synthetic series, Roy pancreas, the three EM cases and TCIA. Only local development serves the CODA scan-derived crops. Selecting CODA in the packaged build shows its pending review status. The source panel links to the sampled section or preview used for display. Native coordinates locate the corresponding field in the original scan where the dataset supplies that mapping.
+
+For independent CODA readings, start with the [blinded packet](coda-lung/PATHOLOGIST_REVIEW.md). Keep reviewer submissions and source exports under the ignored `data/` directory. The green-and-white [profile figure](coda-lung/profiles.png) contains derived silhouettes and point markers. The measured image montage remains local.
+
 ## Development history
 
 | Change | Delivered work |

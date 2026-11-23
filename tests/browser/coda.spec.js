@@ -24,3 +24,17 @@ test("locally generated CODA trace maps the distal section to the native slide",
   await expect(readout).toContainText("X "+position[0]+", Y "+position[1]);
   await expect(page.locator("#z-value")).toHaveText("39");
 });
+
+test("absent local-only data clears the previous selection and preserves review status", async ({ page }) => {
+  await page.route("**/data/coda-lung/manifest.json", route => route.fulfill({status: 404}));
+  await page.goto("/");
+  await expect(page.locator("#section-image")).toBeVisible();
+  await page.locator("#volume-series").selectOption("coda-lung");
+  await expect(page.locator("#volume-status")).toContainText("local CODA reconstruction is unavailable");
+  await expect(page.locator("#evidence-class")).toHaveText("LOCAL-ONLY H&E / REVIEW PENDING");
+  await expect(page.locator("#section-image")).toBeHidden();
+  await expect(page.locator("#source-readout")).toBeEmpty();
+  await expect(page.locator("#ray-host canvas")).toHaveCount(0);
+  await page.locator("#volume-series").selectOption("branching");
+  await expect(page.locator("#section-image")).toBeVisible();
+});

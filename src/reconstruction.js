@@ -1,3 +1,4 @@
+import tumorScores from "../docs/tcia-prostate/scores.json";
 import { createRayVolume } from "./ray-volume.js";
 import { pullAt } from "./coordinates.js";
 import { drawTrace, intervalText, locateArm, nativeLocation } from "./fork-evidence.js";
@@ -12,6 +13,16 @@ const firstH01Section = 600;
 const referenceDirectory = "https://ftp.ebi.ac.uk/biostudies/fire/S-BIAD/187/S-BIAD3187/Files/Vessel1%20Label%20Matrices/";
 let current, renderer, loadController, sourceImage, sourceUrl;
 let cursor = [0, 0, 0];
+
+const caseEvidence = {
+  branching: ["SYNTHETIC", "VOLUME_RECONSTRUCTION.md"],
+  pancreas: ["EXPLORATORY H&E", "DATA.md"],
+  capillary: ["REAL EM / INDEPENDENT REFERENCE", "H01_CAPILLARY.md"],
+  bifurcation: ["REAL EM / INDEPENDENT REFERENCE", "REAL_BIFURCATION.md"],
+  "vascular-fork": ["REAL EM / JUNCTION UNRESOLVED", "H01_VASCULAR_FORK.md"],
+  "tcia-prostate": ["FAILED HELD-OUT H&E", "tcia-prostate/README.md"],
+  "coda-lung": ["LOCAL-ONLY H&E / REVIEW PENDING", "coda-lung/PATHOLOGIST_REVIEW.md"],
+};
 
 async function resource(url, method, signal) {
   const response = await fetch(url, {signal});
@@ -137,6 +148,10 @@ function drawSource() {
   ctx.moveTo(x,y-r); ctx.lineTo(x,y+r);
   ctx.stroke();
   element("source-readout").textContent = `Section ${z+1} / ${current.dimensions[2]} · Source X ${Math.round(x-.5)}, Y ${Math.round(y-.5)} px`;
+  if (current.registration && !current.sourceSections) {
+    const section = current.registration.sections[z];
+    element("source-readout").textContent += ` · ${section.filename} · Preview coordinates · Registration: ${section.status}`;
+  }
   if (current.sourceSections) {
     const section = current.sourceSections[z];
     if (element("point-overlay").checked) {
@@ -223,6 +238,7 @@ function showSource() {
     element("fork-location").href = nativeLocation(current,cursor);
   }
   if (url === sourceUrl) { drawSource(); return; }
+  element("section-image").hidden = true;
   sourceUrl = url;
   sourceImage = null;
   source.width = 0;
@@ -230,6 +246,8 @@ function showSource() {
   const image = new Image();
   image.onload = () => {
     if (url !== sourceUrl) return;
+    element("section-image").href = url;
+    element("section-image").hidden = Boolean(current.trace || current.reference);
     sourceImage = image;
     drawSource();
   };
@@ -262,6 +280,10 @@ async function load() {
   renderer = current = sourceImage = sourceUrl = null;
   source.width=0;
   controls.disabled = true;
+  element("section-image").hidden = true;
+  const [classification, report] = caseEvidence[series.value];
+  element("evidence-class").textContent = classification;
+  element("case-report").href = "https://github.com/adriandarian/3D-histological-reconstruction/blob/integration/histology-evidence-to-main/docs/" + report;
   for (const [plane] of slices) element(plane).width=0;
   element("source-readout").textContent="";
   element("reference-control").hidden = true;
@@ -339,7 +361,7 @@ async function load() {
       ? "Registered pancreas sections · Unknown XY and Z calibration. Depth follows retained section order. The bright cavity is an unverified candidate and registration errors or missing cuts can change its apparent continuity."
       : `Simulated branching duct · Voxel spacing ${spacing.join(" × ")} µm (X, Y, Z). Source sections and registered slices share coordinates.`;
     if (capillary) {
-      status.textContent = `H01 human cerebral cortex · Registered serial electron micrographs. Nominal voxel spacing ${spacing.join(" × ")} µm (X, Y, Z). Gold traces the lumen from the author seed on section 600. Cyan shows the published, human-corrected reference. Later sections were held out for comparison. Magenta marks predicted fragments unmatched to the main lumen. Detached reference islands have uncertain branch identity and are excluded from the link score.`;
+      status.textContent = `H01 human cerebral cortex · Registered serial electron micrographs. Nominal voxel spacing ${spacing.join(" × ")} µm (X, Y, Z). The trace adds 21 extra links relative to the principal reference lumen. Gold traces the lumen from the author seed on section 600. Cyan shows the published, human-corrected reference. Later sections were held out for comparison. Magenta marks predicted fragments unmatched to the main lumen. Detached reference islands have uncertain branch identity and are excluded from the link score.`;
     }
     status.textContent+=" The volume interpolates intensities between sections. Reslices show sampled voxels.";
     if (coda) {
@@ -351,7 +373,8 @@ async function load() {
     if (manifest.prostateFrames) {
       element("reference-control").hidden = false;
       element("source-heading").textContent = "Normalized H&E section";
-      status.textContent = "TCIA aaa0051 · Gold shows pathologist outlines at B, D, F and G and estimated tumor at C and E. Cyan shows the withheld pathologist contours on C and E. Organ dimensions are normalized and depth is exaggerated for display. Data: Madabhushi & Feldman (2016), doi:10.7937/K9/TCIA.2016.TLPMR1AM, CC BY 3.0.";
+      const dice = (level, method) => tumorScores.levels[level][method].dice.toFixed(4);
+      status.textContent = `Failed held-out tumor localization. Predicted Dice C ${dice("C","interpolation")}, E ${dice("E","interpolation")}. Nearest anchor C ${dice("C","nearest")}, E ${dice("E","nearest")}.` + " TCIA aaa0051 · Gold shows pathologist outlines at B, D, F and G and estimated tumor at C and E. Cyan shows the withheld pathologist contours on C and E. Organ dimensions are normalized and depth is exaggerated for display. Data: Madabhushi & Feldman (2016), doi:10.7937/K9/TCIA.2016.TLPMR1AM, CC BY 3.0.";
     }
     try {
       renderer=createRayVolume(element("ray-host"),{
@@ -373,8 +396,9 @@ async function load() {
       ? [Math.floor(dimensions[0]/2), Math.floor(dimensions[1]/2), z]
       : [firstLabel % dimensions[0], Math.floor(firstLabel/dimensions[0]), z]);
   } catch(error) {
-    if(!signal.aborted) status.textContent="Could not load this reconstruction. "+error.message+
-      (coda ? " Generate the local case with python -m scripts.trace_coda_lung after downloading the slides." : "");
+    if (!signal.aborted) status.textContent = coda
+      ? "REVIEW PENDING. The local CODA reconstruction is unavailable. Download the checksum-verified slides and run python -m scripts.trace_coda_lung. Independent pathology review is pending."
+      : "Could not load this reconstruction. " + error.message;
   }
 }
 
@@ -404,6 +428,5 @@ for (const [plane,u,v] of slices) element(plane).onclick=event=>{
 };
 new ResizeObserver(()=>{if(current) drawReslices();}).observe(element("xy").parentElement);
 const requestedSeries = new URLSearchParams(location.search).get("dataset");
-if (requestedSeries === "coda-lung") series.add(new Option("CODA lung bronchiole (local)", "coda-lung"));
 if ([...series.options].some(option => option.value === requestedSeries)) series.value = requestedSeries;
 load();
