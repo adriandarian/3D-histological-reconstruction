@@ -1,0 +1,33 @@
+{
+  "prediction_sha256": "7c40207b476149ad775d098a7a155aaa2ef087bb69460e6b522c130e7aafcd31",
+  "levels": {
+    "C": {
+      "interpolation": {
+        "dice": 0.0091324200913242,
+        "overlap_px": 10,
+        "excess_px": 305,
+        "missed_px": 1865
+      },
+      "nearest": {
+        "dice": 0.04337180832458902,
+        "overlap_px": 62,
+        "excess_px": 922,
+        "missed_px": 1813
+      }
+    },
+    "E": {
+      "interpolation": {
+        "dice": 0.0,
+        "overlap_px": 0,
+        "excess_px": 308,
+        "missed_px": 3439
+      },
+      "nearest": {
+        "dice": 0.06245829440811424,
+        "overlap_px": 234,
+        "excess_px": 3820,
+        "missed_px": 3205
+      }
+    }
+  }
+}
