@@ -233,7 +233,7 @@ export function createInspector({select, drawFlank}) {
   }
   el("interval").onchange = event => choose(byInterval.get(Number(event.target.value))[0]);
   el("choice").onchange = event => choose(byId.get(event.target.value));
-  return {clear, load, pick, pickEdge: id => {
+  return {clear, load, pick, get selectedInterval() { return chosen?.a[2]; }, pickEdge: id => {
     const edge = byId.get(String(id));
     return edge ? choose(edge) : null;
   }};

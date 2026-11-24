@@ -28,6 +28,8 @@ class ConnectionControlTests(unittest.TestCase):
                     self.assertEqual(json.loads((folder / "manifest.json").read_bytes()), manifest)
                     self.assertEqual(float(frozen[scenario]["dice"]), manifest["dice"])
                     self.assertEqual((Path(temp) / name / "graph.json").read_bytes(), (folder / "graph.json").read_bytes())
+                    self.assertEqual((Path(temp) / name / manifest["rgb"]).read_bytes(),
+                                     (folder / manifest["rgb"]).read_bytes())
                     rgb = np.fromfile(folder / manifest["rgb"], np.uint8).reshape(25, 96, 96, 3)
                     opacity = np.fromfile(folder / manifest["foreground"], np.uint8).reshape(rgb.shape[:-1])
                     paths = {folder / p for p in manifest["sections"] if p}
@@ -37,7 +39,8 @@ class ConnectionControlTests(unittest.TestCase):
                             with Image.open(folder / p) as im:
                                 np.testing.assert_array_equal(rgb[z], np.asarray(im))
                         else:
-                            self.assertFalse(rgb[z].any() or opacity[z].any())
+                            self.assertTrue((rgb[z] == 255).all())
+                            self.assertFalse(opacity[z].any())
 
     def test_chosen_connections_demonstrate_the_intended_failure(self):
         for name in CONTROLS:

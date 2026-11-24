@@ -184,7 +184,6 @@ async function drawFlank(canvas, point) {
   await image.decode();
   if (active !== current) throw Error("Case changed");
   const [x,y] = paintSource(canvas, image, point, true);
-  const section = current.graph.sections[point[2]];
   const outside = x<0 || y<0 || x>=canvas.width || y>=canvas.height;
   return {url, readout:`Image X ${Math.floor(x)}, Y ${Math.floor(y)} px${outside ? " · Outside sampled crop" : ""}`};
 }
@@ -338,7 +337,7 @@ function select(point, edge) {
 
 function updateContacts() {
   if (!current?.graph) return;
-  const z = Math.min(cursor[2],current.dimensions[2]-2);
+  const z = inspector.selectedInterval ?? Math.min(cursor[2],current.dimensions[2]-2);
   renderer?.showContacts(element("contact-markers").checked ? current.graph.edges.filter(e => e.a[2]===z) : []);
 }
 element("contact-markers").onchange = updateContacts;

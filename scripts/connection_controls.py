@@ -106,7 +106,8 @@ def export_control(name, root):
 
     # The display knows the inferred mask. It receives neither hidden source intensities
     # nor an apparent tissue opacity on omitted planes.
-    displayed_rgb = np.zeros_like(rgb)
+    # White has zero stain density in the intensity renderer.
+    displayed_rgb = np.full_like(rgb, 255)
     displayed_rgb[retained] = rgb[retained]
     displayed_rgb.tofile(folder / "rgb.bin")
     np.uint8(2 * mask).tofile(folder / "labels.bin")
