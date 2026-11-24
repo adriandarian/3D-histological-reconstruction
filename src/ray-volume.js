@@ -1,5 +1,6 @@
 ﻿import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { bindVolumeInput } from "./volume-input.js";
 
 const vertexShader = `
   out vec3 world;
@@ -78,6 +79,7 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
   const canvas = renderer.domElement;
   host.replaceChildren(canvas);
   const camera = new THREE.PerspectiveCamera(35, 1, .01, 30);
+  camera.up.set(0,0,1);
   const controls = new OrbitControls(camera, canvas);
   controls.minDistance = .15;
   controls.maxDistance = 8;
@@ -172,7 +174,6 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
     render();
   }
   function reset() {
-    camera.up.set(0,0,1);
     camera.position.set(.65,-1.9,.75).multiplyScalar(Math.max(1,1/camera.aspect));
     controls.target.set(0,0,0);
     if (frameAnatomy && anatomy) {
@@ -186,12 +187,8 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
     render();
   }
   const ray = new THREE.Raycaster();
-  let start;
-  canvas.onpointerdown = e => { start = [e.clientX,e.clientY]; };
-  canvas.onpointerup = e => {
-    if (!start || Math.hypot(e.clientX-start[0],e.clientY-start[1])>4) return;
-    const rect = canvas.getBoundingClientRect();
-    ray.setFromCamera({x:2*(e.clientX-rect.left)/rect.width-1,y:1-2*(e.clientY-rect.top)/rect.height},camera);
+  const unbindInput = bindVolumeInput(host, canvas, controls, reset, point => {
+    ray.setFromCamera(point,camera);
     const contact = ray.intersectObjects(contacts.children)[0];
     if (contact) {
       onEdgePick(contact.object.userData.edge);
@@ -212,7 +209,7 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
           if (d < distance) { distance = d; selected = [x,y,z]; }
         }
     if (selected) onPick(...selected);
-  };
+  });
   function set(options) {
     for (const [key,name] of Object.entries({histology:"showHistology",tissue:"showTissue",
       threshold:"threshold",opacity:"opacity",clipOffset:"offset"})) {
@@ -231,7 +228,11 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
   set({});
   const observer = new ResizeObserver(resize);
   observer.observe(host);
-  return {set,reset, showContacts(edges) {
+  return {set,reset, framePoint(point, offset) {
+    controls.target.copy(worldAt(...point));
+    camera.position.fromArray(offset).multiplyScalar(Math.max(1, 1 / camera.aspect)).add(controls.target);
+    controls.update(); // The change listener renders the new pose.
+  }, showContacts(edges) {
     contacts.clear();
     for (const edge of edges) {
       const dot = new THREE.Mesh(contactGeometry, contactMaterial);
@@ -252,6 +253,7 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
     render();
   },dispose() {
     observer.disconnect();
+    unbindInput();
     controls.dispose();
     contactGeometry.dispose();
     contactMaterial.dispose();

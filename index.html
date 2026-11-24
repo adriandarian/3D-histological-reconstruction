@@ -3,27 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Section Atlas · Histology reconstruction</title>
+    <meta name="description" content="An illustrated study of serial tissue sections. Explore the reconstructions, inspect the source images, and see where the evidence for a connection holds." />
+    <title>Tissue reconstruction · Section Atlas</title>
   </head>
   <body>
+    <a class="skip-link" href="#reconstruction">Skip to volume explorer</a>
     <header>
       <div class="brand">
         <span class="logo" aria-hidden="true">▱<i>▱</i><b>▱</b></span>
         Section Atlas
       </div>
-      <span class="header-note">Histology reconstruction</span>
+      <span class="header-note">An interactive research journal</span>
     </header>
     <main>
       <div class="intro">
         <div>
-          <p class="eyebrow">Reconstruction workspace</p>
+          <p class="eyebrow">Research feature &nbsp; / &nbsp; Serial histology</p>
           <h1>Tissue reconstruction</h1>
+          <p class="intro-copy">When a structure seems to continue from one tissue section to the next, how can we tell whether it really connects?</p>
         </div>
       </div>
-      <article id="reconstruction" aria-labelledby="volume-title">
-        <div class="panel-head">
-          <h2 id="volume-title">Volume explorer</h2>
-          <label>Series <select id="volume-series">
+      <nav class="workspace-nav" aria-label="Workspace sections">
+        <a href="#overview">Overview</a>
+        <a href="#reconstruction">Volume explorer</a>
+        <a href="#orthogonal-slices">Orthogonal slices</a>
+        <a href="#connection-inspector">Connection evidence</a>
+        <a href="#comparison">Plane-stack comparison</a>
+        <a href="#discussion">Discussion</a>
+      </nav>
+      <section id="overview" class="article-opening" aria-labelledby="overview-heading">
+        <div class="article-copy">
+          <p class="chapter-label">The question</p>
+          <h2 id="overview-heading">Following a structure through the cut</h2>
+          <p class="article-lede">A thin section cuts across a vessel and leaves a profile on the slide. One slice later, a similar profile appears nearby. Are these two views of the same vessel?</p>
+          <p>To follow a structure through depth, we align successive images so their landmarks line up, then outline the regions of interest. Stacking those outlines gives us a surface to inspect. A fold, a missing section, or a small shift in a boundary can change which regions appear to touch.</p>
+          <p>This atlas pairs each reconstruction with its source images. Begin with a synthetic branch whose shape is known, then try a measured specimen to see which connections survive a check against an independent tracing.</p>
+        </div>
+        <figure class="method-plate">
+          <div class="serial-illustration">
+            <img src="/src/serial-sections.webp" width="1050" height="700" alt="Four tissue sections on glass slides. A pale opening shifts farther right in each successive section." decoding="async">
+            <svg viewBox="0 0 1050 700" aria-hidden="true" focusable="false">
+              <ellipse cx="373" cy="145" rx="25" ry="17" transform="rotate(-12 373 145)"/>
+              <ellipse cx="414" cy="285" rx="33" ry="21" transform="rotate(-10 414 285)"/>
+              <ellipse cx="479" cy="422" rx="39" ry="24" transform="rotate(-8 479 422)"/>
+              <ellipse cx="607" cy="561" rx="42" ry="25" transform="rotate(-5 607 561)"/>
+            </svg>
+          </div>
+          <figcaption><span><strong>Serial sectioning.</strong> Follow the opening from the top slide to the bottom. Each cut samples a different depth. Conceptual illustration.</span><button type="button" class="trace-replay" hidden>Replay trace</button></figcaption>
+        </figure>
+        <div class="article-copy">
+          <p>Imagine placing a fingertip over the second slide in the illustration. The openings above and below it give you a place to look. They leave several possibilities for the hidden section. The channel might bend, divide, or slip out of the field altogether. Lifting your finger gives you a way to check. In a real series with a missing cut, that particular check is gone.</p>
+          <p>The figures below let you move between those two kinds of view. In three dimensions you can follow a candidate path over many sections. On a single slide you can check exactly what was visible at that spot. It helps to start with a shape built expressly for that exercise.</p>
+        </div>
+      </section>
+      <article id="reconstruction" aria-labelledby="volume-title" class="inline-study">
+        <div class="story-copy">
+          <h2 id="volume-title">What makes a branch?</h2>
+          <p>The first specimen is a duct made for this question. Its designers gave it one root and two tips, then cut the shape into 32 simulated sections. The reconstruction had to recover the fork from the images. Having the answer in advance lets us ask exactly where it succeeds, and how little of the picture has to change before it fails.</p>
+        </div>
+        <div class="figure-case">
+          <label class="series-picker">Series <select id="volume-series">
             <option value="branching">Branching phantom</option>
             <option value="capillary">H01 cortical capillary V1</option>
             <option value="bifurcation">FAFB neuronal bifurcation</option>
@@ -38,22 +77,37 @@
               <option value="branch-depth">Uncertain branch depth</option>
             </optgroup>
           </select></label>
+          <p class="evidence-meta"><strong id="evidence-class"></strong><a id="case-report" target="_blank" rel="noopener">Case evidence and provenance <span aria-hidden="true">&#8599;</span></a></p>
         </div>
-        <p><strong id="evidence-class"></strong> &middot; <a id="case-report" target="_blank" rel="noopener">Case evidence and provenance</a></p>
-        <a id="connection-summary" href="#connection-inspector" hidden></a>
-        <div class="volume-layout">
-          <section>
-            <div id="ray-host" aria-label="Interactive 3D volume"></div>
-            <div class="foot"><span>Drag to orbit &middot; Click anatomy to locate its source</span><button id="ray-reset">Reset view</button></div>
-            <label id="contact-markers-control" hidden><input type="checkbox" id="contact-markers"> Pick 3D contacts on this interval (cyan)</label>
+        <p id="case-reading-note" class="story-copy"></p>
+        <section class="volume-plate inline-plate" aria-labelledby="reconstruction-heading">
+          <h3 id="reconstruction-heading">The reconstructed surface</h3>
+          <div id="branch-story" data-reading-disabled>
+            <div class="branch-stage" data-reading-stage>
+              <div id="ray-host" aria-label="Interactive 3D volume"></div>
+              <div class="branch-guide"><span id="branch-scene-caption">Follow the duct through depth</span><button type="button" data-reading-toggle>Pause guided view</button></div>
+            </div>
+            <div class="branch-passages">
+              <div data-reading-step><h4>Begin at the stem</h4><p>Near the base of the model, the gold marker lies inside a single duct profile on section 5. Follow the surface upward from this point. Both arms share this lower stretch.</p></div>
+              <div data-reading-step><h4>Find the last shared profile</h4><p>The view moves to section 15, the last cut where the segmentation still joins the arms. One section higher, the outline separates into two regions. Those neighboring cuts bracket the fork.</p></div>
+              <div data-reading-step><h4>Trace a daughter</h4><p>On section 27 the marker follows one daughter. The other remains visible across the gap. Looking down the fork makes their separation easier to see; selecting a point lets you check the cut for yourself.</p></div>
+            </div>
+          </div>
+          <div class="foot camera-caption"><span>Drag to orbit · Click anatomy to select a point</span><a href="#source-heading">View its section ↓</a><button id="ray-reset">Reset view</button></div>
+          <div class="volume-tools">
             <fieldset id="volume-controls">
               <legend>Volume layers</legend>
+              <div class="layer-toggles">
               <label><input type="checkbox" id="histology" checked> Section intensities</label>
               <label><input type="checkbox" id="tissue"> <span id="foreground-name">Tissue foreground</span></label>
               <label><input type="checkbox" id="anatomy" checked> <span id="anatomy-name">Segmented anatomy</span></label>
+              <label id="contact-markers-control" hidden><input type="checkbox" id="contact-markers"> 3D contact markers (cyan)</label>
+              </div>
+              <details class="layer-options"><summary>Adjust intensity and opacity</summary><div class="layer-ranges">
               <label>Opacity gain <input id="opacity" type="range" min="0" max="1" step=".01" value=".22"></label>
               <label>Intensity threshold <input id="threshold" type="range" min="0" max="1" step=".01" value=".10"></label>
-            </fieldset>
+              </div>
+            </details></fieldset>
             <details class="clipping"><summary>Clipping plane</summary>
               <div class="clip-controls">
                 <label><input id="clip-enable" type="checkbox"> Enable clipping</label>
@@ -62,16 +116,28 @@
                 <label>Offset <input id="clip-offset" type="range" min="-.87" max=".87" step=".01" value="0"></label>
               </div>
             </details>
-          </section>
-          <section class="source-panel">
+          </div>
+        </section>
+        <div class="story-copy">
+          <p>In the simulation, the surface forks where the segmentation finds two distinct regions above a common parent. The way to check that impression is to go back down to the slide. Pick a point on a visible surface. Its depth selects a section, and its other two coordinates mark a location within that image.</p>
+          <h3>Back at the cut surface</h3>
+          <p>A section through the two arms can leave a pair of separate outlines. Taken alone, that image gives no way to tell whether the arms once shared a stem. The clue lies in how those outlines change on the surrounding sections. First, switch the outline off and look at the pixels that gave rise to it. Then bring it back and see where the boundary was drawn.</p>
+        </div>
+          <section class="source-panel" aria-labelledby="source-heading">
             <div class="panel-head"><h3 id="source-heading">Original section</h3></div>
+            <div class="source-image">
+              <canvas id="source-image" aria-label="Source image and selected region contours"></canvas>
+              <span class="source-locator" aria-hidden="true"></span>
+            </div>
+            <div class="foot"><output id="source-readout"></output><a id="section-image" hidden target="_blank" rel="noopener">Open section image</a></div>
+          </section>
+          <div class="source-tools">
+            <h4>Section overlays</h4>
             <div class="source-outlines">
               <label><input id="overlay" type="checkbox" checked> Segmentation (gold)</label>
               <label id="reference-control" hidden><input id="reference-overlay" type="checkbox" checked> Published reference (cyan)</label>
               <label id="point-control" hidden><input id="point-overlay" type="checkbox" checked> Reference points</label>
             </div>
-            <div class="source-image"><canvas id="source-image" aria-label="Source image and selected region contours"></canvas></div>
-            <div class="foot"><output id="source-readout"></output><a id="section-image" hidden target="_blank" rel="noopener">Open section image</a></div>
             <div id="capillary-evidence" hidden>
               <p id="pair-evidence"></p>
               <div class="source-links">
@@ -96,39 +162,75 @@
                 <a id="fork-study" target="_blank" rel="noopener">Dataset and methods</a>
               </div>
             </div>
-          </section>
+          </div>
+        <a id="connection-summary" href="#connection-inspector" hidden></a>
+        <div class="story-copy">
+          <h2 id="orthogonal-slices">Reading the stack in three directions</h2>
+          <p>The axial image follows the plane of the section. Keep your eye on one profile as you move the section slider by a single step. In the branching phantom there is a level where one region gives way to two. You can pass through it in either direction and return to exactly the same coordinates.</p>
         </div>
-        <div class="reslices">
-          <figure><figcaption><strong>XY</strong> Axial</figcaption><div><canvas id="xy"></canvas></div><label>Section Z <output id="z-value"></output><input id="slice-z" type="range" min="0" value="0"></label></figure>
-          <figure><figcaption><strong>XZ</strong> Coronal</figcaption><div><canvas id="xz"></canvas></div><label>Row Y <output id="y-value"></output><input id="slice-y" type="range" min="0" value="0"></label></figure>
-          <figure><figcaption><strong>YZ</strong> Sagittal</figcaption><div><canvas id="yz"></canvas></div><label>Column X <output id="x-value"></output><input id="slice-x" type="range" min="0" value="0"></label></figure>
+        <div class="reslices axial-cut">
+          <figure>
+            <figcaption><strong>XY</strong> Axial</figcaption>
+            <div class="slice-image"><canvas id="xy" aria-label="Axial slice"></canvas></div>
+            <label for="slice-z">Section Z <output for="slice-z" id="z-value"></output></label>
+            <div class="slice-stepper">
+              <button type="button" data-step-for="slice-z" data-delta="-1" aria-label="Previous axial slice">&minus;</button>
+              <input id="slice-z" type="range" min="0" value="0">
+              <button type="button" data-step-for="slice-z" data-delta="1" aria-label="Next axial slice">+</button>
+            </div>
+          </figure>
+        </div>
+        <div class="story-copy"><p>Turn the stack on its side and the same spot takes on another meaning. Each row in a cut through depth comes from a different level. A profile that shifts sideways from slide to slide leaves a sloping track here. A break in that track might be a genuine interruption, or the structure might simply have curved out of the plane you chose.</p><p>The two views below take that side cut in perpendicular directions. Move one crosshair and watch the other image change. A feature that vanishes in one orientation can persist just a few rows away.</p></div>
+        <div class="reslices side-cuts">
+          <figure>
+            <figcaption><strong>XZ</strong> Coronal</figcaption>
+            <div class="slice-image"><canvas id="xz" aria-label="Coronal slice"></canvas></div>
+            <label for="slice-y">Row Y <output for="slice-y" id="y-value"></output></label>
+            <div class="slice-stepper">
+              <button type="button" data-step-for="slice-y" data-delta="-1" aria-label="Previous coronal slice">&minus;</button>
+              <input id="slice-y" type="range" min="0" value="0">
+              <button type="button" data-step-for="slice-y" data-delta="1" aria-label="Next coronal slice">+</button>
+            </div>
+          </figure>
+          <figure>
+            <figcaption><strong>YZ</strong> Sagittal</figcaption>
+            <div class="slice-image"><canvas id="yz" aria-label="Sagittal slice"></canvas></div>
+            <label for="slice-x">Column X <output for="slice-x" id="x-value"></output></label>
+            <div class="slice-stepper">
+              <button type="button" data-step-for="slice-x" data-delta="-1" aria-label="Previous sagittal slice">&minus;</button>
+              <input id="slice-x" type="range" min="0" value="0">
+              <button type="button" data-step-for="slice-x" data-delta="1" aria-label="Next sagittal slice">+</button>
+            </div>
+          </figure>
         </div>
         <p id="volume-status" role="status">Loading reconstruction&hellip;</p>
         <section id="connection-inspector" aria-labelledby="connection-title" hidden>
-          <div class="connection-head">
-            <h3 id="connection-title">Connection evidence</h3>
-            <label>Section interval <select id="connection-interval"></select></label>
+          <div class="story-copy">
+            <h2 id="connection-title">Where two sections meet</h2>
+            <p>Consider just one step along the reconstructed path. On the earlier section a region occupies a patch of pixels. On the later section another region covers some of the same positions after alignment. Where their voxels share a face across the two levels, the program records a contact. That small, local observation is the building block for a much longer claim about continuity.</p>
           </div>
+          <div class="connection-head"><label>Section interval <select id="connection-interval"></select></label></div>
           <p id="connection-empty" hidden></p>
           <div id="connection-body">
-            <div class="connection-grid">
-              <div>
-                <label for="connection-choice">Component connection</label>
-                <select id="connection-choice"></select>
-                <div id="connection-diagram" aria-label="Component connections in the selected interval"></div>
-              </div>
+            <div id="connection-flanks"></div>
+            <div class="story-copy"><p>Look first at the images on either side of the selected interval. Is the opening in a similar position? Does the surrounding tissue give you another landmark? In a region with several small openings, a slight change in alignment can make a different neighbor seem like the best continuation.</p>
+            <p>The lines below record the contacts in this interval. Each endpoint names a connected region on its own section. Select a line to see the image pair and the evidence for that particular link.</p></div>
+            <div class="edge-reading">
+              <label for="connection-choice">Component connection</label>
+              <select id="connection-choice"></select>
+              <div id="connection-diagram" aria-label="Component connections in the selected interval"></div>
               <div aria-live="polite" aria-atomic="true">
                 <div id="connection-flags"></div>
                 <ul id="connection-reasons"></ul>
+                <details class="edge-record"><summary>Read the evidence for this contact</summary>
                 <dl class="connection-facts">
                   <dt>Whole 3D path</dt><dd id="connection-path"></dd>
                   <dt>Reference evidence</dt><dd id="connection-reference"></dd>
                   <dt>Contact</dt><dd id="connection-contact"></dd>
                   <dt>Sampling</dt><dd id="connection-sampling"></dd>
                 </dl>
+                </details>
               </div>
-            </div>
-            <div id="connection-flanks"></div>
             <details class="connection-methods">
               <summary>Registration, segmentation and perturbation checks</summary>
               <dl class="connection-facts">
@@ -138,48 +240,109 @@
                 <dt>Boundary changes</dt><dd id="connection-boundary"></dd>
               </dl>
             </details>
+            </div>
+            <div class="story-copy"><p>There is a useful check in the synthetic experiment. Erasing the two regions on just one section introduced two apparent new roots on the following section. Most of the original shape was still there. Losing that short piece changed the answer to the question a reader would ask of the whole volume: where does each arm begin?</p></div>
           </div>
         </section>
       </article>
-      <h2 id="comparison">Plane-stack comparison</h2>
+      <div id="comparison" class="comparison-heading">
+        <p class="chapter-label">Plane-stack comparison</p>
+        <h2>Putting the slides back in order</h2>
+      </div>
+      <p class="comparison-intro figure-reading">Imagine laying each section on a light table, one transparency on top of the last. A tiny sideways slip can turn a straight column into a staircase. How much of the shape belongs to the specimen, and how much comes from the way the slides were placed?</p>
       <div class="datasets">
         <article id="synthetic" aria-labelledby="synthetic-title">
-          <h2 id="synthetic-title">Synthetic series</h2>
+          <h2 id="synthetic-title">A rehearsal with synthetic glands</h2>
+          <p class="stack-prose">In this first series the positions of the glands are known by construction. The generator draws pale openings rimmed in purple, changes their positions slightly with depth, and shifts each finished image sideways by a known amount. This gives the alignment procedure a problem with an answer we can check.</p>
+          <div class="stack-sequence">
+            <div class="stack-notes">
+              <p data-reading-step data-section="19" data-frame="registered"><strong>The reference section.</strong> The middle section anchors this stack. Look at the pale openings and at the edge of the tissue island around them. The crosshair marks a fixed position in the aligned stack.</p>
+              <p data-reading-step data-section="21" data-frame="source"><strong>Two cuts farther on.</strong> This is section 21 as it was acquired. Notice the position of the entire island within the frame. The crosshair maps the same stack position back into this original image.</p>
+              <p data-reading-step data-section="21" data-frame="registered"><strong>Align the same cut.</strong> Section 21 now moves into the reference frame. Compare the outer margin with its position a moment ago. The openings move with it because registration adjusts the placement of the image as a whole.</p>
+            </div>
+          </div>
+          <div class="stack-bridge">
+            <p>Now turn the same series on its side. Each layer below is one of the images you just examined. The highlighted plane follows your section choice above, and the small marker carries your selected position into the stack. Seen edge-on, a displacement that was subtle in the flat image can become a visible step.</p>
+            <p>The synthetic series assigns four micrometres between sections. That spacing gives the depth axis a defined scale. The next example asks what we can still learn when a dataset preserves the sequence of the slides but leaves their spacing uncertain.</p>
+          </div>
         </article>
         <article id="real" aria-labelledby="real-title">
-          <h2 id="real-title">Pancreas histology</h2>
+          <h2 id="real-title">Following the margin of a pancreas section</h2>
+          <p class="stack-prose">These 36 sections come from Bijoyeta Roy’s 10× pancreas series. Start at the edge where the pink tissue meets the pale glass. A notch or a narrow projection can be easier to recognize in the next image than a patch of densely stained cells. It also gives us a particular place to check the alignment.</p>
+          <div class="stack-sequence">
+            <div class="stack-notes">
+              <p data-reading-step data-section="19" data-frame="registered"><strong>Find your bearings.</strong> This middle section anchors the alignment. Follow the outer tissue margin until you can pick out the pale connective tissue along it.</p>
+              <p data-reading-step data-section="16" data-frame="registered" data-landmark="172,138"><strong>Find the tongue.</strong> The crosshair moves to the tip of a pale tongue of connective tissue on section 16. Its position was marked on the original slide and mapped into this aligned image.</p>
+              <p data-reading-step data-section="17" data-frame="registered" data-landmark="314,96"><strong>Follow the landmark.</strong> Section 17 shows the marked position of that same tip on the next slide. After rigid alignment, the two positions lay 10.9 preview pixels apart. Local refinement reduced that separation to 5.2 pixels. These landmarks were available when the method was chosen.</p>
+            </div>
+          </div>
+          <div class="stack-bridge">
+            <p>There is a different difficulty at the far end of the series. On sections 35 and 36, a marked junction between a septum and a band remained 23.3 pixels apart after local refinement. A section can appear well aligned across much of its area while one recognizable junction still lands in different places.</p>
+            <p>Rotate the stack below to inspect its edge. The file numbers establish the sequence, but the source gives neither a cut-to-cut interval nor a record of missing tissue. The displayed separation lets you see the order of the images. To convert the height of this stack into a tissue measurement, we would also need the distance between the original cuts.</p>
+          </div>
+          <p class="stack-prose stack-sources">The registration report identifies the landmarks, records their errors and describes how to reproduce the alignment. <a href="https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/DATA.md">Registration report</a> · <a href="https://doi.org/10.17632/fzskwpzs5j.1">Original pancreas dataset</a></p>
         </article>
       </div>
+      <section id="discussion" class="article-discussion" aria-labelledby="discussion-heading">
+        <div class="article-copy">
+          <p class="chapter-label">Discussion</p>
+          <h2 id="discussion-heading">How far does the evidence reach?</h2>
+          <p class="article-lede">A reconstruction makes a prediction about the tissue between sections. These two cases show what happens when that prediction meets an independent outline.</p>
+          <h3>A vessel that could be followed</h3>
+          <p>In the H01 cortical capillary, the reconstructed main channel matched all 31 successive links in the reference tracing at the study’s primary overlap threshold. The same reconstruction also produced 21 extra links relative to that reference. Recovering the vessel’s course was easier than assigning every small fragment to it.</p>
+          <div class="case-links"><a href="?dataset=capillary#reconstruction">Inspect the capillary</a><a href="https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/H01_CAPILLARY.md">Read the validation report</a></div>
+          <p>Those two counts describe different experiences of the same volume. A reader who starts inside the main opening can follow it through this sequence. A reader who starts on an extra fragment may follow a connection the reference does not support. Asking only whether the main channel stays intact would miss that second reader’s experience.</p>
+          <h3>What happened in the gap?</h3>
+          <p>In a separate experiment the team could answer a question that real slides often leave open. They built synthetic tissue in which one lumen left the image and a different one entered near the same position. Then they withheld seven sections. The two ends on either side of the gap made a convincing pair.</p>
+          <figure class="essay-plate"><img src="/src/missing-interval.webp" width="1280" height="640" loading="lazy" alt="Two dotted paths across blank paper connect one visible tube to different possible continuations."><figcaption>A missing interval can admit more than one continuation. Conceptual illustration.</figcaption></figure>
+          <p>Even with the sections correctly aligned, interpolation joined the unrelated lumens in all six synthetic blocks. The error occupied little of the total tissue volume. Yet the reconstructed path would let you travel between openings that belonged to different channels.</p>
+          <div class="case-links"><a href="?dataset=field-gap#reconstruction">Explore the missing-section case</a><a href="https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/robustness/README.md">Read the missing-section experiment</a></div>
+          <h3>A contour that missed its target</h3>
+          <p>In the prostate series, the experiment withheld pathologists’ tumor outlines at two levels and estimated them from the flanking outlines. The estimates missed nearly all of the annotated tumor at both levels. A smooth surface across a gap can conceal a large error.</p>
+          <div class="case-links"><a href="?dataset=tcia-prostate#reconstruction">Inspect the withheld contours</a><a href="https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/tcia-prostate/README.md">Read the experiment</a></div>
+          <figure class="essay-plate"><a href="https://raw.githubusercontent.com/adriandarian/3D-histological-reconstruction/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/tcia-prostate/holdouts.png" aria-label="Open the prostate comparison at full size"><img src="/docs/tcia-prostate/holdouts.png" width="768" height="572" loading="lazy" alt="Two rows of prostate sections compare the pathologist’s outlines with the predicted contours and the nearest measured outline."></a><figcaption>Two held-out levels from one prostate. From left to right, the columns show the pathologist’s outline, the interpolated estimate, and the outline copied from the nearest measured level.</figcaption></figure>
+          <p>Look at the lower row first. On level E the pathologist marked a large region in the lower half of the section. The interpolated estimate sits elsewhere. On the grid used to score the result, the two shared zero pixels. At level C they shared ten out of 1,875 annotated pixels. Copying the nearest measured outline also gave poor agreement.</p>
+          <p>Several explanations remain possible in this specimen. A tumor focus can change between sampled levels. The slides can also shift or differ in orientation as they are stitched and aligned. The overlap score alone cannot distinguish those explanations. Landmarks inside the prostate would give a future experiment a separate check on alignment.</p>
+          <h3>The open question</h3>
+          <p>These cases test individual reconstructions. Whether seeing the stack improves a reader’s judgment on routine stained slides remains an open research question.</p>
+          <p>A reader study could give two people the same series and ask whether two profiles belong to one branching structure. Both could inspect every original section. One would also have the linked volume. Across multiple readers and cases, the viewing conditions would switch, and an independent assessment would supply the reference for scoring.</p>
+          <p>One answer worth recording is “I can follow it this far.” A reader might locate the last section on which a boundary is clear and the first on which two profiles are visible again. That brackets the uncertainty. It also gives the next person something concrete to inspect when they return to the slides.</p>
+          <a href="https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/RESEARCH_DIRECTION.md">Read the proposed reader study</a>
+        </div>
+      </section>
+      <template id="camera-guide">
+        <details class="camera-guide">
+          <summary>Mouse &amp; keyboard</summary>
+          <p>Click or Tab into the 3D view to use its shortcuts.</p>
+          <dl data-controls-help>
+            <dt>Orbit</dt><dd>Drag or press the arrow keys.</dd>
+            <dt>Pan</dt><dd>Right-drag, or hold Shift while dragging or pressing an arrow key.</dd>
+            <dt>Zoom</dt><dd>Scroll or press + and −.</dd>
+            <dt>Select</dt><dd>Click a point or press Enter to pick at the center.</dd>
+            <dt>Reset</dt><dd>Press Home to restore the starting view.</dd>
+          </dl>
+        </details>
+      </template>
       <template id="explorer">
+        <div class="stack-stage" data-reading-stage>
         <p data-ui="status" role="status">Loading series…</p>
-        <section>
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Axial plane</p>
-              <h3>Section view</h3>
-            </div>
-            <select data-ui="frame" aria-label="Section image">
-              <option value="registered">Registered</option>
-              <option value="source">Original</option>
-            </select>
-          </div>
+        <section class="stack-plate" aria-label="Axial section">
           <div data-ui="slide">
             <div data-ui="osd"></div>
             <span data-ui="cross" aria-hidden="true"></span>
           </div>
-          <div class="foot">
-            <span>Click to place cursor</span
-            ><span class="tools"
-              ><button data-ui="out" aria-label="Zoom out">−</button
-              ><button data-ui="in" aria-label="Zoom in">+</button
-              ><button data-ui="fit">Fit</button></span
-            >
-          </div>
-        </section>
-        <section class="navigation">
-          <div class="nav-head">
-            <h3>Section navigator</h3>
-            <output data-ui="count">—</output>
+          <div class="stack-caption">
+            <span>Axial section · Click a landmark to mark its position.</span>
+            <button type="button" data-reading-toggle disabled>Follow the text</button>
+            <span class="tools">
+              <select data-ui="frame" aria-label="Section image">
+                <option value="registered">Registered</option>
+                <option value="source">Original</option>
+              </select>
+              <button data-ui="out" aria-label="Zoom out">−</button>
+              <button data-ui="in" aria-label="Zoom in">+</button>
+              <button data-ui="fit">Fit</button>
+            </span>
           </div>
           <div class="range">
             <button data-ui="prev" aria-label="Previous section">←</button
@@ -190,24 +353,21 @@
               min="0"
               max="0"
               value="0"
-            /><button data-ui="next" aria-label="Next section">→</button>
+            /><button data-ui="next" aria-label="Next section">→</button><output data-ui="count">—</output>
           </div>
-          <div class="details">
+          <details class="stack-readout"><summary>Coordinates and registration score</summary><div class="details">
             <span data-ui="coords"></span><span data-ui="quality"></span>
-          </div>
+          </div></details>
         </section>
-        <section>
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Spatial reconstruction</p>
-              <h3>Volume view</h3>
-            </div>
-            <button data-ui="reset">Reset view</button>
-          </div>
+        </div>
+      </template>
+      <template id="stack-view">
+        <section class="stack-plate" aria-label="Reconstructed stack">
           <div data-ui="volume"></div>
-          <div class="foot">
-            <span>Drag to orbit · Scroll to zoom</span
-            ><span data-ui="scale">Illustrative depth</span>
+          <div class="stack-caption camera-caption">
+            <span>Section stack · <span data-ui="scale">Illustrative depth</span></span>
+            <button type="button" data-ui="replay" aria-label="Replay stack assembly in section order" hidden>Replay stack</button>
+            <button data-ui="reset">Reset view</button>
           </div>
         </section>
         <footer><span data-ui="provenance"></span></footer>

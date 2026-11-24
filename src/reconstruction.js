@@ -3,28 +3,119 @@ import { createRayVolume } from "./ray-volume.js";
 import { pullAt } from "./coordinates.js";
 import { drawTrace, intervalText, locateArm, nativeLocation } from "./fork-evidence.js";
 import { createInspector } from "./evidence-inspector.js";
+import { bindReadingSteps } from "./reading-steps.js";
 
 const element = id => document.getElementById(id);
 const controls = element("volume-controls");
 const series = element("volume-series");
 const source = element("source-image");
+const sourceStage = source.parentElement;
+const sourceLocator = sourceStage.querySelector(".source-locator");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let locatorPoint, locatorAnimation;
+let locatorPending = false, sourceVisible = false;
+
+function positionLocator() {
+  if (!locatorPoint || !source.width || !source.height) return;
+  const box = source.getBoundingClientRect(), stage = sourceStage.getBoundingClientRect();
+  // The source canvas uses object-fit: contain, including on narrow screens.
+  const scale = Math.min(box.width / source.width, box.height / source.height);
+  sourceLocator.style.left = (box.left - stage.left + box.width / 2 + (locatorPoint[0] - source.width / 2) * scale) + "px";
+  sourceLocator.style.top = (box.top - stage.top + box.height / 2 + (locatorPoint[1] - source.height / 2) * scale) + "px";
+}
+
+function cueSourcePoint() {
+  if (!sourceVisible || !locatorPending) return;
+  locatorPending = false;
+  if (reducedMotion.matches) return;
+  positionLocator();
+  locatorAnimation?.cancel();
+  locatorAnimation = sourceLocator.animate([
+    {opacity: 0, transform: "scale(1.65)"},
+    {opacity: .95, transform: "scale(1.28)", offset: .23},
+    {opacity: 0, transform: "scale(.55)"},
+  ], {duration: 820, easing: "ease-out"});
+}
+
+function clearLocator() {
+  locatorAnimation?.cancel();
+  locatorPoint = null;
+  locatorPending = false;
+}
+
+new IntersectionObserver(([entry]) => {
+  sourceVisible = entry.intersectionRatio >= .4;
+  if (sourceVisible) cueSourcePoint();
+}, {threshold: .4}).observe(sourceStage);
+new ResizeObserver(() => {
+  if (locatorAnimation?.playState === "running") positionLocator();
+}).observe(sourceStage);
 const slices = [["xy", 0, 1, 2], ["xz", 0, 2, 1], ["yz", 1, 2, 0]];
 const axes = ["x", "y", "z"];
+const sliceSteps = Array.from(document.querySelectorAll("[data-step-for]"), button => ({
+  button,
+  slider: element(button.dataset.stepFor),
+  delta: Number(button.dataset.delta),
+}));
+
+function updateSliceControls() {
+  for (const {button, slider, delta} of sliceSteps) {
+    slider.disabled = !current;
+    const next = slider.valueAsNumber + delta;
+    button.disabled = !current || next < Number(slider.min) || next > Number(slider.max);
+  }
+}
 const firstH01Section = 600;
 const referenceDirectory = "https://ftp.ebi.ac.uk/biostudies/fire/S-BIAD/187/S-BIAD3187/Files/Vessel1%20Label%20Matrices/";
 let current, renderer, loadController, sourceImage, sourceUrl;
 let cursor = [0, 0, 0];
-const controlCases = new Set(["field-gap", "fold", "dilation", "branch-depth"]);
 const inspector = createInspector({select, drawFlank});
+// Interior samples of the known phantom mask, ordered from stem to daughter.
+const branchScenes = [
+  {point: [39, 36, 4], offset: [.30, -1.85, .65], caption: "Stem · Section 5 of 32"},
+  {point: [39, 37, 14], offset: [.18, -1.38, .42], caption: "Fork · Section 15 of 32"},
+  {point: [54, 41, 26], offset: [.25, -1.12, 1.05], caption: "Daughter · Section 27 of 32"},
+];
+const branchStory = element("branch-story");
+const guide = bindReadingSteps(branchStory, index => {
+  if (!renderer || series.value !== "branching") return;
+  const scene = branchScenes[index];
+  select(scene.point);
+  element("branch-scene-caption").textContent = scene.caption;
+}, position => {
+  if (!renderer || series.value !== "branching") return;
+  const index = Math.floor(position);
+  const start = branchScenes[index], end = branchScenes[Math.ceil(position)];
+  const fraction = position - index;
+  // Ease into each authored viewpoint in both scroll directions.
+  const blend = fraction * fraction * (3 - 2 * fraction);
+  const between = (a, b) => a.map((value, axis) => value + (b[axis] - value) * blend);
+  renderer.framePoint(between(start.point, end.point), between(start.offset, end.offset));
+});
+function pauseForExploration(event) {
+  if (branchStory.hasAttribute("data-reading-disabled") ||
+      event.target.closest("[data-reading-toggle], #volume-series") ||
+      (event.type === "keydown" && event.key === "Tab")) return;
+  if (event.target.closest("canvas, input, select, button, .connection-link")) guide.pause();
+}
+for (const event of ["pointerdown", "keydown", "input"]) {
+  element("reconstruction").addEventListener(event, pauseForExploration, true);
+}
 
 const caseEvidence = {
-  branching: ["SYNTHETIC", "VOLUME_RECONSTRUCTION.md"],
-  pancreas: ["EXPLORATORY H&E", "DATA.md"],
-  capillary: ["REAL EM / INDEPENDENT REFERENCE", "H01_CAPILLARY.md"],
-  bifurcation: ["REAL EM / INDEPENDENT REFERENCE", "REAL_BIFURCATION.md"],
-  "vascular-fork": ["REAL EM / JUNCTION UNRESOLVED", "H01_VASCULAR_FORK.md"],
-  "tcia-prostate": ["FAILED HELD-OUT H&E", "tcia-prostate/README.md"],
-  "coda-lung": ["LOCAL-ONLY H&E / REVIEW PENDING", "coda-lung/PATHOLOGIST_REVIEW.md"],
+  branching: ["SYNTHETIC", "VOLUME_RECONSTRUCTION.md", "Start with the fork in this simulated duct. Select one arm and follow its outline through the axial sections. Where do two separate profiles become one?"],
+  pancreas: ["EXPLORATORY H&E", "DATA.md", "Select a point in the pancreas reconstruction to find its position on the original slide. Compare the local tissue outline before following it into the next section."],
+  capillary: ["REAL EM / INDEPENDENT REFERENCE", "H01_CAPILLARY.md", "Follow the capillary opening across sections. Compare the predicted gold outline with the cyan reference, especially where the prediction breaks into fragments."],
+  bifurcation: ["REAL EM / INDEPENDENT REFERENCE", "REAL_BIFURCATION.md", "Use the daughter buttons to locate the two arms of the fly neuron. On which sections do the traced points fall inside separate predicted regions?"],
+  "vascular-fork": ["REAL EM / JUNCTION UNRESOLVED", "H01_VASCULAR_FORK.md", "The two daughter vessels can be located downstream. Follow them toward the apparent fork to see where the evidence for the junction becomes uncertain."],
+  "tcia-prostate": ["FAILED HELD-OUT H&E", "tcia-prostate/README.md", "On the two withheld sections, compare the estimated tumor boundary with the pathologist’s contour. Most of the annotated tumor falls outside the estimate."],
+  "coda-lung": ["LOCAL-ONLY H&E / REVIEW PENDING", "coda-lung/PATHOLOGIST_REVIEW.md", "A labeled bronchiole on the first slide anchors this proposed path through lung tissue. The remaining identities await independent review. The images require a local export."],
+};
+const controlNotes = {
+  "field-gap": "Seven sections are missing between the measured endpoints. Inspect the flanking images to see how two unrelated lumens can form one reconstructed path.",
+  fold: "A simulated fold bridges neighboring lumens. Inspect the measured sections at the flagged contact to locate the source of the apparent connection.",
+  dilation: "Expanding a segmented boundary can bring neighboring regions into contact. Inspect the boundary checks to see whether this link survives a small change in outline.",
+  "branch-depth": "Follow the parent to its two daughters. Which measured sections bound the split, and how precisely can they locate it in depth?",
 };
 
 async function resource(url, method, signal) {
@@ -191,6 +282,13 @@ async function drawFlank(canvas, point) {
 function drawSource() {
   if (!sourceImage) return;
   const [x,y] = paintSource(source, sourceImage, cursor, false);
+  if (x < 0 || y < 0 || x >= source.width || y >= source.height) {
+    clearLocator();
+  } else if (!locatorPoint || x !== locatorPoint[0] || y !== locatorPoint[1]) {
+    locatorPoint = [x, y];
+    locatorPending = true;
+    cueSourcePoint();
+  }
   const [cx,cy,z] = cursor;
   const [w,h] = current.dimensions;
   const ctx = source.getContext("2d");
@@ -283,6 +381,7 @@ function sectionUrl(z) {
 function showSource() {
   const z = cursor[2], url = sectionUrl(z);
   if (!url) {
+    clearLocator();
     sourceImage = sourceUrl = null;
     source.width = 0;
     element("section-image").hidden = true;
@@ -297,6 +396,7 @@ function showSource() {
   if (url === sourceUrl) { drawSource(); return; }
   element("section-image").hidden = true;
   sourceUrl = url;
+  clearLocator();
   sourceImage = null;
   source.width = 0;
   element("source-readout").textContent = "Loading section…";
@@ -329,6 +429,7 @@ function select(point, edge) {
     if (axis === "z" && current.sourceSections) element("z-value").value = 2*cursor[i]+1;
     if (axis === "z" && current.controlDescription) element("z-value").value = cursor[i];
   });
+  updateSliceControls();
   renderer?.select(cursor[2],cursor[0],cursor[1],edge);
   updateContacts();
   drawReslices();
@@ -343,6 +444,8 @@ function updateContacts() {
 element("contact-markers").onchange = updateContacts;
 
 async function load() {
+  branchStory.setAttribute("data-reading-disabled", "");
+  guide.refresh();
   inspector.clear();
   element("contact-markers").checked = false;
   element("contact-markers-control").hidden = true;
@@ -351,11 +454,16 @@ async function load() {
   const {signal} = loadController;
   renderer?.dispose();
   renderer = current = sourceImage = sourceUrl = null;
+  clearLocator();
+  updateSliceControls();
   source.width=0;
   controls.disabled = true;
   element("section-image").hidden = true;
-  const control = controlCases.has(series.value);
-  const [classification, report] = control ? ["SYNTHETIC / KNOWN TOPOLOGY", "robustness/README.md"] : caseEvidence[series.value];
+  const control = Object.hasOwn(controlNotes, series.value);
+  const [classification, report, note] = control
+    ? ["SYNTHETIC / KNOWN TOPOLOGY", "robustness/README.md", controlNotes[series.value]]
+    : caseEvidence[series.value];
+  element("case-reading-note").textContent = note;
   element("evidence-class").textContent = classification;
   element("case-report").href = "https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/" + report;
   for (const [plane] of slices) element(plane).width=0;
@@ -491,6 +599,10 @@ async function load() {
         ? " Local connection graph unavailable. Run python -m scripts.export_connection_evidence --case coda-lung."
         : " Connection graph unavailable: " + error.message;
     }
+    if (!signal.aborted && renderer && series.value === "branching") {
+      branchStory.removeAttribute("data-reading-disabled");
+      guide.refresh();
+    }
   } catch(error) {
     if (!signal.aborted) status.textContent = coda
       ? "REVIEW PENDING. The local CODA reconstruction is unavailable. Download the checksum-verified slides and run python -m scripts.trace_coda_lung. Independent pathology review is pending."
@@ -515,6 +627,12 @@ for (const button of element("fork-evidence").querySelectorAll("[data-arm]")) {
 axes.forEach((a,i)=>element("slice-"+a).oninput=event=>{
   const p=[...cursor]; p[i]=+event.target.value; select(p);
 });
+for (const {button, slider, delta} of sliceSteps) {
+  button.onclick = () => {
+    slider.stepUp(delta);
+    slider.dispatchEvent(new Event("input", {bubbles: true}));
+  };
+}
 for (const [plane,u,v] of slices) element(plane).onclick=event=>{
   if(!current) return;
   const r=event.target.getBoundingClientRect(), p=[...cursor];

@@ -1,11 +1,48 @@
 import { pullAt } from "./coordinates.js";
 import OpenSeadragon from "openseadragon";
 import { createVolume } from "./volume.js";
+import { bindReadingSteps } from "./reading-steps.js";
 import "./style.css";
+import "./workspace.css";
+import "./article.css";
+import "./inline-figures.css";
+import "./inline-stacks.css";
+import "./serial-illustration.js";
+
+const workspaceNav = document.querySelector(".workspace-nav");
+const destinations = Array.from(workspaceNav.querySelectorAll("a"), link => ({
+  link,
+  section: document.querySelector(link.hash),
+}));
+
+function markCurrentSection() {
+  const offset = workspaceNav.offsetHeight + 24;
+  const visible = destinations.filter(({section}) => !section.hidden);
+  const atEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+  const active = atEnd ? visible.at(-1) :
+    visible.findLast(({section}) => section.getBoundingClientRect().top <= offset) ?? visible[0];
+  for (const destination of destinations) {
+    if (destination === active) destination.link.setAttribute("aria-current", "location");
+    else destination.link.removeAttribute("aria-current");
+  }
+}
+window.addEventListener("scroll", markCurrentSection, {passive: true});
+new ResizeObserver(markCurrentSection).observe(document.body);
+markCurrentSection();
+
+function addCameraGuide(panel) {
+  const guide = document.querySelector("#camera-guide").content.cloneNode(true);
+  guide.querySelector("[data-controls-help]").id = panel.id + "-camera-help";
+  panel.querySelector(".camera-caption").append(guide);
+}
 
 function mountExplorer(root) {
   const dataset = root.id;
-  root.append(document.querySelector("#explorer").content.cloneNode(true));
+  const bridge = root.querySelector(".stack-bridge");
+  const sequence = root.querySelector(".stack-sequence");
+  sequence.prepend(document.querySelector("#explorer").content.cloneNode(true));
+  bridge.after(document.querySelector("#stack-view").content.cloneNode(true));
+  addCameraGuide(root);
   const ui = Object.fromEntries(
     [...root.querySelectorAll("[data-ui]")].map((element) => [
       element.dataset.ui,
@@ -29,18 +66,18 @@ function mountExplorer(root) {
     x,
     y,
     index;
-  function sectionTransform() {
-    if (ui.frame.value !== "source") return new DOMMatrix();
+  function sectionTransform(frame = ui.frame.value) {
+    if (frame !== "source") return new DOMMatrix();
     const { transform, shift } = data.sections[index];
     if (!transform) return new DOMMatrix().translate(...shift);
     const [[a, c, e], [b, d, f]] = transform;
     return new DOMMatrix([a, b, c, d, e, f]);
   }
   // The pull grid maps a displayed point to its position in the rigid frame.
-  function registeredPoint(point) {
-    const rigid = sectionTransform().transformPoint(point);
+  function registeredPoint(point, frame = ui.frame.value) {
+    const rigid = sectionTransform(frame).transformPoint(point);
     const grid = data.sections[index].pullGrid;
-    if (!grid || ui.frame.value !== "source") return rigid;
+    if (!grid || frame !== "source") return rigid;
     let aligned = rigid;
     for (let step = 0; step < 24; step++) {
       const [dx,dy] = pullAt(aligned, grid, data.width, data.height);
@@ -174,13 +211,38 @@ function mountExplorer(root) {
       for (const key of ["frame", "section", "in", "out", "fit"])
         ui[key].disabled = false;
       ui.reset.disabled = !volume;
+      ui.replay.hidden = !volume;
       ui.section.max = data.sections.length - 1;
       x = Math.floor(data.width / 2);
       y = Math.floor(data.height / 2);
       showSection(Math.floor(data.sections.length / 2));
       viewer.addOnceHandler("open", () => viewer.viewport.goHome(true));
+      const steps = sequence.querySelectorAll("[data-reading-step]");
+      const toggle = sequence.querySelector("[data-reading-toggle]");
+      toggle.disabled = false;
+      const reading = bindReadingSteps(sequence, stepIndex => {
+        const step = steps[stepIndex].dataset;
+        ui.frame.value = step.frame;
+        showSection(Number(step.section) - 1);
+        if (step.landmark) {
+          const [px, py] = step.landmark.split(",").map(Number);
+          const point = registeredPoint({x: px, y: py}, "source");
+          selectPoint(point.x, point.y);
+        } else {
+          selectPoint(Math.floor(data.width / 2), Math.floor(data.height / 2));
+        }
+        viewer.viewport.goHome(true);
+      });
+      const pauseOnControl = event => {
+        const control = event.target.closest('button, input, select, summary, [data-ui="osd"], [data-ui="volume"] canvas');
+        if (control && control !== toggle && control.closest(".stack-plate")) reading.pause();
+      };
+      for (const type of ["pointerdown", "keydown", "input", "change", "click"]) {
+        root.addEventListener(type, pauseOnControl, true);
+      }
     } catch {
       ui.status.textContent = `Series unavailable. Generate public/data/${dataset}/manifest.json with the Python pipeline and reload.`;
+      sequence.dataset.readingDisabled = "";
       for (const panel of root.querySelectorAll("section, footer")) panel.hidden = true;
     }
   }
@@ -192,9 +254,11 @@ function mountExplorer(root) {
   ui.out.onclick = () => viewer.viewport.zoomBy(1 / 1.5);
   ui.fit.onclick = () => viewer.viewport.goHome();
   ui.reset.onclick = () => volume?.reset();
+  ui.replay.onclick = () => volume?.replay();
   load();
 }
 
+addCameraGuide(document.querySelector("#reconstruction"));
 for (const panel of document.querySelectorAll(".datasets > article")) {
   mountExplorer(panel);
 }

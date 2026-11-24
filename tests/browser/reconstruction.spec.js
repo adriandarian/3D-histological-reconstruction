@@ -1,5 +1,49 @@
 import { test, expect } from '@playwright/test';
 
+test('slice buttons move the source section and stop at its boundaries', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/');
+  const slider = page.locator('#slice-z');
+  const previous = page.locator('[data-step-for="slice-z"][data-delta="-1"]');
+  const next = page.locator('[data-step-for="slice-z"][data-delta="1"]');
+  await expect(next).toBeEnabled();
+  await slider.focus();
+  await slider.press('Home');
+  await expect(previous).toBeDisabled();
+  await next.click();
+  await expect(page.locator('#source-readout')).toContainText('Section 2 / 32');
+  await previous.click();
+  await expect(page.locator('#source-readout')).toContainText('Section 1 / 32');
+  await slider.press('End');
+  await expect(next).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('workspace navigation follows the selected section on a narrow screen', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/');
+  const nav = page.getByRole('navigation', {name: 'Workspace sections'});
+  for (const name of ['Connection evidence', 'Plane-stack comparison', 'Orthogonal slices', 'Volume explorer']) {
+    const link = nav.getByRole('link', {name});
+    await link.click();
+    await expect(link).toHaveAttribute('aria-current', 'location');
+    const heading = page.locator(await link.getAttribute('href'));
+    const [target, menu] = await Promise.all([heading.boundingBox(), nav.boundingBox()]);
+    expect(target.y).toBeGreaterThanOrEqual(menu.y + menu.height - 1);
+  }
+});
+
+test('a reader can follow a finding into its figure and switch cases', async ({page}) => {
+  await page.goto('/');
+  const plate = page.locator('#overview img');
+  await expect.poll(() => plate.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
+  await page.locator('#discussion a[href*="dataset=capillary"]').click();
+  await expect(page.locator('#volume-series')).toHaveValue('capillary');
+  await expect(page.locator('#case-reading-note')).toContainText('cyan reference');
+  await page.locator('#volume-series').selectOption('field-gap');
+  await expect(page.locator('#case-reading-note')).toContainText('Seven sections');
+});
+
 async function pickVisibleSurface(page) {
   const view = page.locator('#ray-host canvas');
   const screenshot = await view.screenshot();

@@ -1,0 +1,115 @@
+main { max-width: 1400px; }
+#branch-story, .stack-sequence { scroll-margin-top: 64px; }
+[data-reading-toggle] { min-inline-size: 10.5em; }
+@media (hover: none) and (pointer: coarse) {
+  /* A swipe across the guided picture should advance the article. The toggle restores touch gestures. */
+  [data-following="true"]:not([data-reading-disabled]) [data-reading-stage] :is(canvas, [data-ui="osd"]) {
+    pointer-events: none;
+  }
+}
+.intro { min-height: clamp(225px, 23vw, 325px); }
+.intro-copy { max-width: 43ch; font: 400 clamp(17px, 1.65vw, 23px)/1.45 Georgia, serif; }
+.workspace-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: clamp(6px, 2vw, 28px);
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.workspace-nav a {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 15px 2px 12px;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  text-decoration: none;
+}
+.workspace-nav a[aria-current="location"] { color: #642a4a; border-color: currentColor; background: transparent; }
+.workspace-nav a:focus-visible { outline-offset: -3px; }
+.article-opening, .article-discussion {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.article-opening {
+  display: block;
+  margin: 0 auto;
+  padding: clamp(36px, 5vw, 72px) 0;
+}
+.article-copy { max-width: 660px; margin-inline: auto; }
+.chapter-label {
+  margin: 0 0 12px;
+  color: #7a4863;
+  font: 650 11px/1.5 "Segoe UI", sans-serif;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.article-copy h2, .comparison-heading h2 {
+  font: 400 clamp(30px, 3.4vw, 48px)/1.1 Georgia, serif;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.article-copy p:not(.chapter-label), .figure-reading {
+  margin: 14px 0 0;
+  font: 400 clamp(16px, 1.3vw, 19px)/1.65 Georgia, serif;
+  color: #4c4148;
+}
+.article-copy p.article-lede {
+  font-size: clamp(19px, 1.7vw, 24px);
+  line-height: 1.48;
+  color: #342631;
+}
+.method-plate { max-width: 740px; margin: 32px auto; }
+.serial-illustration { position: relative; }
+.serial-illustration img { height: auto; }
+.serial-illustration svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.serial-illustration ellipse { fill: none; stroke: #502b46; stroke-width: 3; opacity: .45; }
+.method-plate figcaption:has(.trace-replay) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 20px;
+  max-width: none;
+}
+.trace-replay { flex: none; }
+@media (max-width: 520px) {
+  .method-plate figcaption:has(.trace-replay) { flex-wrap: wrap; }
+}
+.essay-plate { margin: 32px auto; }
+.essay-plate img { display: block; width: 100%; height: auto; }
+.essay-plate figcaption { padding: 10px 0; color: #695a64; font: 13px/1.55 "Segoe UI", sans-serif; }
+.method-plate img { display: block; width: 100%; border: 1px solid #dfd4c5; border-radius: 3px; }
+.method-plate figcaption { padding-top: 10px; max-width: 55ch; font-size: 13px; line-height: 1.55; color: #665a64; }
+.method-plate figcaption strong { color: #492d40; }
+#reconstruction { border-top: 1px solid #cabac3; padding-top: 28px; }
+#reconstruction > .chapter-label { margin-bottom: 8px; }
+.figure-reading { max-width: 76ch; margin: 10px 0 22px; }
+#case-reading-note:empty { display: none; }
+#case-reading-note { margin-top: -4px; }
+#connection-body .figure-reading { font: 400 16px/1.6 Georgia, serif; }
+#comparison { margin-bottom: 0; }
+.article-discussion {
+  margin: clamp(36px, 6vw, 78px) 0 24px;
+  border-block: 1px solid #cabac3;
+  padding: clamp(30px, 4.5vw, 68px) 0;
+}
+.article-discussion .article-copy { margin: auto; }
+.article-discussion h3 { margin: 30px 0 6px; font: 400 clamp(22px, 2vw, 29px)/1.2 Georgia, serif; }
+.article-discussion h3 + p { margin-top: 8px; }
+.case-links { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 10px; }
+.case-links a, .article-discussion .article-copy > a { font-size: 14px; font-weight: 600; }
+.article-discussion .article-copy > a { display: inline-block; margin-top: 10px; }
+#overview, #discussion, #reconstruction, #orthogonal-slices, #connection-inspector, #comparison {
+  scroll-margin-top: 62px;
+}
+@media (max-width: 760px) {
+  header { gap: 14px; }
+  .brand { white-space: nowrap; flex-shrink: 0; }
+  .header-note { padding-left: 14px; }
+  .article-opening { grid-template-columns: minmax(0, 1fr); }
+  .method-plate { width: min(100%, 460px); justify-self: center; }
+  .workspace-nav { gap: 16px; }
+  .workspace-nav a { font-size: 13px; }
+}
