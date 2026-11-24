@@ -19,6 +19,8 @@ The [research direction](RESEARCH_DIRECTION.md) connects these experiments to th
 
 BigBrain was investigated as another calibrated source. The original proposal also discusses RAPID, ANHIR, ACROBAT, larger whole-slide series, and multiscale storage. Their appearance in the planning document records a research direction. [Calibrated dataset investigation](VOLUME_RECONSTRUCTION.md#calibrated-serial-section-acquisition) · [Original POC plan](POC_PLAN.md)
 
+The [connection robustness study](robustness/README.md) measures how motion, tissue damage, segmentation errors and missing sections affect false joins. It includes paired synthetic ablations and source-image sensitivity checks on Roy, CODA and TCIA.
+
 ## From a section to a selected surface point
 
 1. **Load and align a series.** The Python CLI reads equal-sized, single-frame images with consecutive numeric section identifiers. It resizes the images, estimates pairwise rigid transforms, composes them toward the middle section, and records the valid sampled field. Optional local refinement saves a displacement grid for each section. The H01 experiment starts with the registration supplied by its publisher. [Registration CLI](../pipeline/__main__.py) · [Local deformation](../pipeline/deformation.py) · [Tissue-tip refinement](../pipeline/contours.py)
