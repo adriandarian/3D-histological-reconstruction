@@ -2,6 +2,7 @@ import tumorScores from "../docs/tcia-prostate/scores.json";
 import { createRayVolume } from "./ray-volume.js";
 import { pullAt } from "./coordinates.js";
 import { drawTrace, intervalText, locateArm, nativeLocation } from "./fork-evidence.js";
+import { createInspector } from "./evidence-inspector.js";
 
 const element = id => document.getElementById(id);
 const controls = element("volume-controls");
@@ -13,6 +14,8 @@ const firstH01Section = 600;
 const referenceDirectory = "https://ftp.ebi.ac.uk/biostudies/fire/S-BIAD/187/S-BIAD3187/Files/Vessel1%20Label%20Matrices/";
 let current, renderer, loadController, sourceImage, sourceUrl;
 let cursor = [0, 0, 0];
+const controlCases = new Set(["field-gap", "fold", "dilation", "branch-depth"]);
+const inspector = createInspector({select, drawFlank});
 
 const caseEvidence = {
   branching: ["SYNTHETIC", "VOLUME_RECONSTRUCTION.md"],
@@ -28,6 +31,30 @@ async function resource(url, method, signal) {
   const response = await fetch(url, {signal});
   if (!response.ok) throw Error("Unavailable asset " + url.pathname);
   return response[method]();
+}
+
+// Match scipy.ndimage.label's scan order and four-neighbor connectivity.
+function componentAt(volume, x, y, z) {
+  const [w,h] = volume.dimensions, n = w*h, start = z*n;
+  const visited = new Uint8Array(n), queue = new Int32Array(n);
+  let id = 0;
+  for (let k=0; k<n; k++) {
+    if (visited[k] || volume.labels[start+k] !== 2) continue;
+    id++;
+    queue[0]=k; visited[k]=1;
+    let head=0, tail=1;
+    while (head<tail) {
+      const p=queue[head++];
+      if (p===y*w+x) return id;
+      const neighbors=[p-w,p+w];
+      if (p%w) neighbors.push(p-1);
+      if (p%w!==w-1) neighbors.push(p+1);
+      for (const q of neighbors) if (q>=0 && q<n && !visited[q] && volume.labels[start+q]===2) {
+        queue[tail++]=q; visited[q]=1;
+      }
+    }
+  }
+  return 0;
 }
 
 async function loadRegistration(url, expected, signal) {
@@ -92,10 +119,10 @@ function drawReslices() {
   }
 }
 
-function sourceProjection() {
+function sourceProjection(canvas, z) {
   const [w,h] = current.dimensions;
-  const section = current.registration?.sections[cursor[2]];
-  const {width,height} = source;
+  const section = current.registration?.sections[z];
+  const {width,height} = canvas;
   const transform = section?.transform;
   const inverse = transform
     ? new DOMMatrix([transform[0][0],transform[1][0],transform[0][1],transform[1][1],transform[0][2],transform[1][2]]).inverse()
@@ -108,15 +135,14 @@ function sourceProjection() {
   };
 }
 
-function drawSource() {
-  if (!sourceImage) return;
-  source.width = sourceImage.naturalWidth;
-  source.height = sourceImage.naturalHeight;
-  const ctx = source.getContext("2d");
-  ctx.drawImage(sourceImage,0,0);
-  const project = sourceProjection();
+function paintSource(canvas, image, point, forceBoundaries) {
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image,0,0);
+  const project = sourceProjection(canvas, point[2]);
   const [w,h] = current.dimensions;
-  const [cx,cy,z] = cursor;
+  const [cx,cy,z] = point;
   function contour(mask, value, color) {
     const has = (x,y) => x>=0 && x<w && y>=0 && y<h && mask[(z*h+y)*w+x]===value;
     ctx.beginPath();
@@ -130,10 +156,10 @@ function drawSource() {
       }
     }
     ctx.strokeStyle=color;
-    ctx.lineWidth=Math.max(.65,source.width/320);
+    ctx.lineWidth=Math.max(.65,canvas.width/320);
     ctx.stroke();
   }
-  if (element("overlay").checked) contour(current.labels, 2, "#ffb600");
+  if (forceBoundaries || element("overlay").checked) contour(current.labels, 2, "#ffb600");
   if (current.reference && element("reference-overlay").checked) contour(current.reference, 1, "#00dcf6");
   if (current.tumorReference && element("reference-overlay").checked) contour(current.tumorReference, 1, "#00dcf6");
   if (current.uncertain && element("overlay").checked) contour(current.uncertain, 1, "#ff2592");
@@ -141,12 +167,34 @@ function drawSource() {
     drawTrace(ctx, project, current.trace.planes[z].points);
   const [x,y]=project(cx,cy);
   ctx.strokeStyle="#008273";
-  ctx.lineWidth=Math.max(.5,source.width/480);
-  const r=Math.max(2,source.width/55);
+  ctx.lineWidth=Math.max(.5,canvas.width/480);
+  const r=Math.max(2,canvas.width/55);
   ctx.beginPath();
   ctx.moveTo(x-r,y); ctx.lineTo(x+r,y);
   ctx.moveTo(x,y-r); ctx.lineTo(x,y+r);
   ctx.stroke();
+  return [x,y];
+}
+
+async function drawFlank(canvas, point) {
+  const active = current, url = sectionUrl(point[2]);
+  if (!url) throw Error("Source unavailable");
+  const image = new Image();
+  image.src = url;
+  await image.decode();
+  if (active !== current) throw Error("Case changed");
+  const [x,y] = paintSource(canvas, image, point, true);
+  const section = current.graph.sections[point[2]];
+  const outside = x<0 || y<0 || x>=canvas.width || y>=canvas.height;
+  return {url, readout:`Image X ${Math.floor(x)}, Y ${Math.floor(y)} px${outside ? " · Outside sampled crop" : ""}`};
+}
+
+function drawSource() {
+  if (!sourceImage) return;
+  const [x,y] = paintSource(source, sourceImage, cursor, false);
+  const [cx,cy,z] = cursor;
+  const [w,h] = current.dimensions;
+  const ctx = source.getContext("2d");
   element("source-readout").textContent = `Section ${z+1} / ${current.dimensions[2]} · Source X ${Math.round(x-.5)}, Y ${Math.round(y-.5)} px`;
   if (current.registration && !current.sourceSections) {
     const section = current.registration.sections[z];
@@ -227,11 +275,21 @@ function showEvidence(z, imageUrl) {
   element("reference-tiff").href = referenceDirectory + `image${String(section).padStart(5,"0")}z_249800x_175000y.tiff`;
 }
 
-function showSource() {
-  const z = cursor[2];
-  const url = current.registration
+function sectionUrl(z) {
+  return current.registration
     ? new URL(current.registration.sections[z].source, current.realBase).href
-    : new URL(current.sections[z], current.base).href;
+    : current.sections[z] ? new URL(current.sections[z], current.base).href : null;
+}
+
+function showSource() {
+  const z = cursor[2], url = sectionUrl(z);
+  if (!url) {
+    sourceImage = sourceUrl = null;
+    source.width = 0;
+    element("section-image").hidden = true;
+    element("source-readout").textContent = `Section ${z} was withheld. Geometry is interpolated. See the acquired flanks in the connection inspector.`;
+    return;
+  }
   if (current.reference) showEvidence(z, url);
   if (current.trace) {
     element("fork-image").href = url;
@@ -257,22 +315,38 @@ function showSource() {
   image.src = url;
 }
 
-function select(point) {
+function select(point, edge) {
   if (!current) return;
+  const prior = cursor;
   cursor = point.map((n,i) => Math.min(current.dimensions[i]-1,Math.max(0,Math.round(n))));
+  if (!edge && current.graph && cursor.some((v,i) => v !== prior[i])) {
+    edge = inspector.pick(...cursor, componentAt(current,...cursor));
+  }
   axes.forEach((axis,i) => {
     element("slice-"+axis).value=cursor[i];
     const firstIndex = axis === "z" ? (current.reference ? firstH01Section : 1) : 0;
     element(axis+"-value").value=cursor[i]+firstIndex;
     if (axis === "z" && current.trace) element("z-value").value = current.trace.planes[cursor[i]].z;
     if (axis === "z" && current.sourceSections) element("z-value").value = 2*cursor[i]+1;
+    if (axis === "z" && current.controlDescription) element("z-value").value = cursor[i];
   });
-  renderer?.select(cursor[2],cursor[0],cursor[1]);
+  renderer?.select(cursor[2],cursor[0],cursor[1],edge);
+  updateContacts();
   drawReslices();
   showSource();
 }
 
+function updateContacts() {
+  if (!current?.graph) return;
+  const z = Math.min(cursor[2],current.dimensions[2]-2);
+  renderer?.showContacts(element("contact-markers").checked ? current.graph.edges.filter(e => e.a[2]===z) : []);
+}
+element("contact-markers").onchange = updateContacts;
+
 async function load() {
+  inspector.clear();
+  element("contact-markers").checked = false;
+  element("contact-markers-control").hidden = true;
   loadController?.abort();
   loadController = new AbortController();
   const {signal} = loadController;
@@ -281,9 +355,10 @@ async function load() {
   source.width=0;
   controls.disabled = true;
   element("section-image").hidden = true;
-  const [classification, report] = caseEvidence[series.value];
+  const control = controlCases.has(series.value);
+  const [classification, report] = control ? ["SYNTHETIC / KNOWN TOPOLOGY", "robustness/README.md"] : caseEvidence[series.value];
   element("evidence-class").textContent = classification;
-  element("case-report").href = "https://github.com/adriandarian/3D-histological-reconstruction/blob/integration/histology-evidence-to-main/docs/" + report;
+  element("case-report").href = "https://github.com/adriandarian/3D-histological-reconstruction/blob/12a43a96f96ffcd3d40dbc8f72077de922691746/docs/" + report;
   for (const [plane] of slices) element(plane).width=0;
   element("source-readout").textContent="";
   element("reference-control").hidden = true;
@@ -296,13 +371,14 @@ async function load() {
   const status=element("volume-status");
   status.textContent="Loading reconstruction…";
   const coda = series.value === "coda-lung";
-  const base=new URL((coda ? "./data/" : "./")+series.value+"/manifest.json",document.baseURI);
+  const base=new URL((coda ? "./data/" : control ? "./evidence-controls/" : "./")+series.value+"/manifest.json",document.baseURI);
   const realBase=new URL("./data/real/manifest.json",document.baseURI);
   const real=series.value==="pancreas";
   const capillary=series.value==="capillary";
   const fork=series.value==="bifurcation" || series.value==="vascular-fork";
   try {
-    const manifest=await resource(base,"json",signal);
+    const manifestBytes=await resource(base,"arrayBuffer",signal);
+    const manifest=JSON.parse(new TextDecoder().decode(manifestBytes));
     const asset=(name,method)=>resource(new URL(name,base),method,signal);
     const [rgbBuffer,labelBuffer,mesh,registration,foregroundBuffer,referenceBuffer,validation,uncertainBuffer,trace] = await Promise.all([
       asset(manifest.rgb,"arrayBuffer"),asset(manifest.labels,"arrayBuffer"),
@@ -364,6 +440,7 @@ async function load() {
       status.textContent = `H01 human cerebral cortex · Registered serial electron micrographs. Nominal voxel spacing ${spacing.join(" × ")} µm (X, Y, Z). The trace adds 21 extra links relative to the principal reference lumen. Gold traces the lumen from the author seed on section 600. Cyan shows the published, human-corrected reference. Later sections were held out for comparison. Magenta marks predicted fragments unmatched to the main lumen. Detached reference islands have uncertain branch identity and are excluded from the link score.`;
     }
     status.textContent+=" The volume interpolates intensities between sections. Reslices show sampled voxels.";
+    if (control) status.textContent = manifest.controlDescription + " Whole-volume Dice " + manifest.dice.toFixed(3) + ". Section indices start at zero.";
     if (coda) {
       element("point-control").hidden = false;
       element("source-heading").textContent = "Measured H&E crop";
@@ -379,8 +456,11 @@ async function load() {
     try {
       renderer=createRayVolume(element("ray-host"),{
         dimensions,spacing,rgba,labels:anatomy,uncertain,
-        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary || fork || coda
-      },(x,y,z)=>{element("overlay").checked=true;select([x,y,z]);});
+        mesh:mesh && {vertices:mesh.positions,faces:mesh.indices}, frameAnatomy:capillary || fork || coda || control
+      },(x,y,z)=>{
+        element("overlay").checked=true;
+        select([x,y,z], current.graph ? inspector.pick(x,y,z,componentAt(current,x,y,z)) : undefined);
+      }, id=>inspector.pickEdge(id));
       controls.disabled=false;
       renderSettings();
     } catch(error) {
@@ -395,6 +475,23 @@ async function load() {
     select(firstLabel < 0
       ? [Math.floor(dimensions[0]/2), Math.floor(dimensions[1]/2), z]
       : [firstLabel % dimensions[0], Math.floor(firstLabel/dimensions[0]), z]);
+    try {
+      const graphUrl = control ? manifest.graph : coda ? "connections.json" : "../connection-evidence/" + series.value + ".json";
+      const graph = await asset(graphUrl,"json");
+      const normalized = new TextEncoder().encode(new TextDecoder().decode(manifestBytes).replaceAll("\r\n","\n"));
+      const [hash, manifestHash] = await Promise.all([labelBuffer, normalized].map(async buffer =>
+        Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)), b => b.toString(16).padStart(2,"0")).join("")));
+      if (signal.aborted) return;
+      if (graph.labelsSha256 !== hash || graph.manifestSha256 !== manifestHash) throw Error("Graph belongs to different source geometry or mask");
+      current.graph = graph;
+      inspector.load(graph, manifest.defaultEdge);
+      if (!manifest.defaultEdge && graph.edges.length) inspector.pick(...cursor, componentAt(current, ...cursor));
+      element("contact-markers-control").hidden = !renderer;
+    } catch (error) {
+      if (!signal.aborted) status.textContent += coda
+        ? " Local connection graph unavailable. Run python -m scripts.export_connection_evidence --case coda-lung."
+        : " Connection graph unavailable: " + error.message;
+    }
   } catch(error) {
     if (!signal.aborted) status.textContent = coda
       ? "REVIEW PENDING. The local CODA reconstruction is unavailable. Download the checksum-verified slides and run python -m scripts.trace_coda_lung. Independent pathology review is pending."
