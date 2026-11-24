@@ -2,15 +2,21 @@
 
 Section Atlas reconstructs structures from serial tissue sections and links each selected surface point to its source image. The WebGL2 workspace provides volume rendering, labeled surfaces, orthogonal reslices, clipping, and independent comparison against source annotations where available.
 
-**Project north star:** [GOAL.md](GOAL.md) defines the scientific mission, current evidence, deployment status, validation requirements, and milestone gates. Start there to distinguish a convincing 3D visualization from trustworthy, independently supported histological anatomy.
+[GOAL.md](GOAL.md) defines the scientific milestones and the independent evidence each requires.
 
 The research goal is to determine whether serial H&E slides can establish which tissue structures connect and whether access to the reconstruction improves a reader's judgment. The [research direction](docs/RESEARCH_DIRECTION.md) defines the next H&E experiment and a comparison with conventional serial-slide review.
+
+The [CODA lung experiment](docs/coda-lung/README.md) tests a candidate correspondence across 20 ordinary H&E slides, starting from one publisher-labeled bronchiole on slide 001. The other 19 identities await independent pathology review. The report includes all 20 profiles, their native slide coordinates, a registration-only control and instructions to inspect the locally generated 3D trace against the measured images.
 
 The [project guide](docs/PROJECT_GUIDE.md) indexes every experiment, its data and units, reproduction commands, validation evidence, and development history. For the two-daughter experiment, start with the [real bifurcation study](docs/REAL_BIFURCATION.md).
 
 Open `?dataset=bifurcation` in the built app to follow both daughters of a manually traced fly projection neuron. The mesh resolves distinct daughter profiles on eight consecutive EM sections. A separate human cortical vascular candidate is available at `?dataset=vascular-fork`. [Vascular evidence and unresolved junction](docs/H01_VASCULAR_FORK.md)
 
 ![Measured EM sections with the predicted neuronal boundary and independent daughter annotations](docs/fafb-daughters.png)
+
+The [TCIA prostate experiment](docs/tcia-prostate/README.md) tests six-level tumor reconstruction against two withheld pathologist contours. The interpolated extent missed nearly all annotated tumor on both levels. Open `?dataset=tcia-prostate` to compare prediction and reference.
+
+Run `python -m pipeline.review_score` to check the CODA review status from a clean checkout. The [reader import protocol](docs/coda-lung/ANNOTATION_IMPORT.md) and [independent scoring guide](docs/coda-lung/INDEPENDENT_SCORING.md) cover the local image-backed experiment.
 
 ## Real capillary validation
 
@@ -74,12 +80,13 @@ python scripts/landmark_error.py public/data/real/manifest.json docs/pancreas_ch
 
 ```sh
 python -m unittest discover -s tests
+npm ci
 npx playwright install chromium
-npm run test:e2e
 npm run build
+npm run test:built
 npm run preview
 ```
 
-Generate the synthetic export before running browser tests. The real-series test also runs when its local export exists. Use `npm run dev` for locally generated datasets. To update the production demo, publish new export archives in a new release and update the release URL and SHA-256 values in `scripts/install-demo-data.mjs`.
+The packaged Chromium suite uses the checksum-verified release stacks from the build. For a development run, generate the synthetic series and the real pancreas export first, then run `npm run test:e2e`. The local CODA test also runs when its export is present. Use `npm run dev` for locally generated datasets. To update the production demo, publish new export archives in a new release and update the release URL and SHA-256 values in `scripts/install-demo-data.mjs`.
 
 The pipeline holds preview arrays in memory and the viewer loads downsampled textures. Whole-slide ingestion, tiled multiresolution export and chunked 3D access are future work. The [POC plan](docs/POC_PLAN.md) describes the path to larger series and the proposed independent landmark validation.
