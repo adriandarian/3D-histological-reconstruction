@@ -31,13 +31,21 @@
             <option value="tcia-prostate">TCIA prostate tumor extent</option>
             <option value="coda-lung">CODA lung bronchiole (local only)</option>
             <option value="pancreas">Pancreas histology</option>
+            <optgroup label="Connection robustness controls">
+              <option value="field-gap">Seven missing sections</option>
+              <option value="fold">Fold-induced fusion</option>
+              <option value="dilation">Boundary dilation</option>
+              <option value="branch-depth">Uncertain branch depth</option>
+            </optgroup>
           </select></label>
         </div>
         <p><strong id="evidence-class"></strong> &middot; <a id="case-report" target="_blank" rel="noopener">Case evidence and provenance</a></p>
+        <a id="connection-summary" href="#connection-inspector" hidden></a>
         <div class="volume-layout">
           <section>
             <div id="ray-host" aria-label="Interactive 3D volume"></div>
             <div class="foot"><span>Drag to orbit &middot; Click anatomy to locate its source</span><button id="ray-reset">Reset view</button></div>
+            <label id="contact-markers-control" hidden><input type="checkbox" id="contact-markers"> Pick 3D contacts on this interval (cyan)</label>
             <fieldset id="volume-controls">
               <legend>Volume layers</legend>
               <label><input type="checkbox" id="histology" checked> Section intensities</label>
@@ -96,6 +104,42 @@
           <figure><figcaption><strong>YZ</strong> Sagittal</figcaption><div><canvas id="yz"></canvas></div><label>Column X <output id="x-value"></output><input id="slice-x" type="range" min="0" value="0"></label></figure>
         </div>
         <p id="volume-status" role="status">Loading reconstruction&hellip;</p>
+        <section id="connection-inspector" aria-labelledby="connection-title" hidden>
+          <div class="connection-head">
+            <h3 id="connection-title">Connection evidence</h3>
+            <label>Section interval <select id="connection-interval"></select></label>
+          </div>
+          <p id="connection-empty" hidden></p>
+          <div id="connection-body">
+            <div class="connection-grid">
+              <div>
+                <label for="connection-choice">Component connection</label>
+                <select id="connection-choice"></select>
+                <div id="connection-diagram" aria-label="Component connections in the selected interval"></div>
+              </div>
+              <div aria-live="polite" aria-atomic="true">
+                <div id="connection-flags"></div>
+                <ul id="connection-reasons"></ul>
+                <dl class="connection-facts">
+                  <dt>Whole 3D path</dt><dd id="connection-path"></dd>
+                  <dt>Reference evidence</dt><dd id="connection-reference"></dd>
+                  <dt>Contact</dt><dd id="connection-contact"></dd>
+                  <dt>Sampling</dt><dd id="connection-sampling"></dd>
+                </dl>
+              </div>
+            </div>
+            <div id="connection-flanks"></div>
+            <details class="connection-methods">
+              <summary>Registration, segmentation and perturbation checks</summary>
+              <dl class="connection-facts">
+                <dt>Registration</dt><dd id="connection-registration"></dd>
+                <dt>Segmentation</dt><dd id="connection-segmentation"></dd>
+                <dt>Alignment shifts</dt><dd id="connection-shifts"></dd>
+                <dt>Boundary changes</dt><dd id="connection-boundary"></dd>
+              </dl>
+            </details>
+          </div>
+        </section>
       </article>
       <h2 id="comparison">Plane-stack comparison</h2>
       <div class="datasets">

@@ -1,1 +1,2 @@
 *.bin binary
+public/evidence-controls/**/graph.json text eol=lf

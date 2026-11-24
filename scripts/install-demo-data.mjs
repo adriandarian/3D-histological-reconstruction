@@ -13,7 +13,7 @@ const datasets = {
 const temporary = await mkdtemp(join(tmpdir(), 'histology-demo-'));
 try {
   // Vite skips public/ because local registration exports can contain large NPZ files.
-  for (const name of ['branching', 'pancreas', 'capillary', 'bifurcation', 'vascular-fork', 'tcia-prostate']) {
+  for (const name of ['branching', 'pancreas', 'capillary', 'bifurcation', 'vascular-fork', 'tcia-prostate', 'connection-evidence', 'evidence-controls']) {
     await cp(join('public', name), join('dist', name), { recursive: true });
   }
   for (const [name, expectedHash] of Object.entries(datasets)) {

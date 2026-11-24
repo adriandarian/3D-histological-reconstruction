@@ -135,20 +135,19 @@ def overlap_translation(moving, fixed, fixed_shift):
     return np.array([tx[peak], ty[peak]])
 
 
-def reconstruct(rows, out, name, kind, attribution, local=False):
-    files, images, offsets = zip(*rows)
-    h, w = images[0].shape[:2]
-    gray = [cv2.cvtColor(im, cv2.COLOR_RGB2GRAY).astype(np.float32) for im in images]
-    mid = len(images) // 2
-    transforms = np.repeat(np.eye(3)[None], len(images), axis=0)
+def rigid_registration(gray, reference):
+    """Register grayscale planes into the chosen reference frame and return adjacent-pair QA."""
+    h, w = gray[0].shape
+    mid = reference
+    transforms = np.repeat(np.eye(3)[None], len(gray), axis=0)
     center = np.array([w / 2, h / 2, 1])
     window = cv2.createHanningWindow((w, h), cv2.CV_32F)
     valid_frame = np.ones((h, w), np.uint8)
     qa = [
         dict(beforeScore=None, score=None, status="reference", fixed=None)
-        for _ in images
+        for _ in gray
     ]
-    for i in [*range(mid - 1, -1, -1), *range(mid + 1, len(images))]:
+    for i in [*range(mid - 1, -1, -1), *range(mid + 1, len(gray))]:
         fixed = i + 1 if i < mid else i - 1
         parent = transforms[fixed]
         offset = (parent @ center - center)[:2]
@@ -217,6 +216,16 @@ def reconstruct(rows, out, name, kind, attribution, local=False):
             status="accepted" if accepted else "identity fallback",
             fixed=fixed,
         )
+    return transforms, qa
+
+
+def reconstruct(rows, out, name, kind, attribution, local=False):
+    files, images, offsets = zip(*rows)
+    h, w = images[0].shape[:2]
+    gray = [cv2.cvtColor(im, cv2.COLOR_RGB2GRAY).astype(np.float32) for im in images]
+    mid = len(images) // 2
+    transforms, qa = rigid_registration(gray, mid)
+    valid_frame = np.ones((h, w), np.uint8)
     sections, stack, masks, validity = [], [], [], []
     grids = None
     if local:
