@@ -1,7 +1,7 @@
 #connection-inspector {
-  margin-top: 20px;
-  padding: clamp(14px, 2vw, 26px);
-  background: #fafbf8;
+  margin-top: 32px;
+  padding: clamp(16px, 2.4vw, 38px);
+  background: #fffcf9;
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
@@ -13,19 +13,21 @@
   align-items: baseline;
   gap: 8px 16px;
 }
-.connection-head h3 { margin: 0; }
+.connection-head { border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+.connection-head h3 { margin: 0; font: 400 clamp(26px, 2.8vw, 40px)/1.2 Georgia, serif; }
+.connection-head label, label[for="connection-choice"] { font-size: 13px; font-weight: 600; }
 .connection-head label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .connection-grid { display: grid; grid-template-columns: minmax(220px, .78fr) minmax(0, 1.22fr); gap: 24px; margin: 18px 0; }
 #connection-choice { display: block; width: 100%; margin: 5px 0 8px; }
-#connection-diagram { max-height: 300px; overflow: auto; background: #eef2ed; border-radius: 6px; }
+#connection-diagram { max-height: 300px; overflow: auto; background: #f3ebf0; border: 1px solid #e3d6de; border-radius: 8px; }
 #connection-diagram svg { width: 100%; display: block; }
-#connection-diagram svg text { font-size: 12px; fill: #244038; }
-#connection-diagram circle { fill: #385b52; pointer-events: none; }
+#connection-diagram svg text { font-size: 12px; fill: #47323e; }
+#connection-diagram circle { fill: #61445a; pointer-events: none; }
 .connection-link { cursor: pointer; }
 .connection-link path { fill: none; }
 .connection-link-hit { stroke: transparent; stroke-width: 15px; }
-.connection-link-line { stroke: #9cafa5; stroke-width: 2px; pointer-events: none; }
-.connection-link[aria-pressed="true"] .connection-link-line { stroke: #006951; stroke-width: 4px; }
+.connection-link-line { stroke: #aa9aa6; stroke-width: 2px; pointer-events: none; }
+.connection-link[aria-pressed="true"] .connection-link-line { stroke: #82365c; stroke-width: 4px; }
 .connection-link:hover .connection-link-line, .connection-link:focus .connection-link-line { stroke: #663e09; }
 #connection-flags { display: flex; flex-wrap: wrap; gap: 4px; }
 #connection-flags span {
@@ -37,20 +39,25 @@
 #connection-flags [data-flag="contradicted"], #connection-flags [data-flag="mixed_path"] { color: #782c28; background: #f7deda; }
 #connection-reasons { margin: 9px 0; padding-left: 1.15em; }
 #connection-inspector li, #connection-inspector p, .connection-facts { font-size: 13px; line-height: 1.55; }
-.connection-facts { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 4px 16px; margin: 10px 0; }
+.connection-facts { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 0 12px; margin: 10px 0; }
+.connection-facts > * { padding: 7px 0; border-top: 1px solid #e8dfe4; }
 .connection-facts dt { font-weight: 650; }
 .connection-facts dd { margin: 0; overflow-wrap: anywhere; }
 #connection-flanks { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 #connection-flanks figure { margin: 0; background: white; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 #connection-flanks figcaption, #connection-flanks p { padding: 8px 12px; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
-#connection-flanks canvas { display: block; width: 100%; height: clamp(120px, 16vw, 230px); object-fit: contain; background: #23312e; }
-#connection-flanks a { color: #175b46; }
+#connection-flanks canvas { display: block; width: 100%; height: clamp(120px, 16vw, 230px); object-fit: contain; background: #2a222d; }
+#connection-flanks a { color: var(--ink); }
 .connection-methods { margin-top: 14px; }
-.connection-methods summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.connection-methods summary { cursor: pointer; font-size: 14px; font-weight: 600; border-top: 1px solid var(--line); padding: 16px 0 0; }
 @media (max-width: 720px) {
   .connection-grid { grid-template-columns: 1fr; gap: 12px; }
   .connection-head select { max-width: 100%; }
   .connection-facts { grid-template-columns: minmax(72px, .32fr) minmax(0,1fr); gap: 4px 9px; }
+}
+@media (max-width: 520px) {
+  #connection-flanks { grid-template-columns: 1fr; }
+  #connection-flanks canvas { height: 170px; }
 }
 #connection-summary:not([hidden]) {
   display: block; width: fit-content; max-width: 100%; margin: 0 0 12px; padding: 7px 11px;

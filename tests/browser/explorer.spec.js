@@ -24,7 +24,12 @@ for (const dataset of ['synthetic', 'real']) {
     await expect(slider).toHaveValue(String(initial));
     const coords = panel.locator('[data-ui="coords"]');
     const before = await coords.textContent();
-    await panel.locator('[data-ui="osd"]').click({position: {x: 135, y: 115}});
+    const slideViewer = panel.locator('[data-ui="osd"]');
+    const slideBounds = await slideViewer.boundingBox();
+    await slideViewer.click({position: {
+      x: Math.floor(slideBounds.width / 2 + 24),
+      y: Math.floor(slideBounds.height / 2),
+    }});
     await expect(coords).not.toHaveText(before);
     const raw = manifest.sections[initial].source;
     const sourceLoad = page.waitForRequest(req => decodeURI(req.url()).endsWith(raw));
