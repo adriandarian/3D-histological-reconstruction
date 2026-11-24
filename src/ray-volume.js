@@ -64,7 +64,7 @@ function flat(array) {
   return Array.isArray(array[0]) ? array.flat() : array;
 }
 
-export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, uncertain, frameAnatomy}, onPick) {
+export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, uncertain, frameAnatomy}, onPick, onEdgePick) {
   const [nx, ny, nz] = dimensions;
   if (rgba.length !== nx * ny * nz * 4 || labels.length !== nx * ny * nz)
     throw new Error("Volume buffer size differs from its dimensions.");
@@ -146,6 +146,15 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
   marker.visible = false;
   marker.renderOrder = 1;
   scene.add(marker);
+  const edgeLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+    new THREE.LineBasicMaterial({color:0xff9d31, depthTest:false, transparent:true}));
+  edgeLine.visible = false;
+  edgeLine.renderOrder = 2;
+  scene.add(edgeLine);
+  const contactGeometry = new THREE.SphereGeometry(.009, 12, 8);
+  const contactMaterial = new THREE.MeshBasicMaterial({color:0x00ffff, depthTest:false, transparent:true});
+  const contacts = new THREE.Group();
+  scene.add(contacts);
 
   function render() {
     renderer.setRenderTarget(target);
@@ -180,9 +189,15 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
   let start;
   canvas.onpointerdown = e => { start = [e.clientX,e.clientY]; };
   canvas.onpointerup = e => {
-    if (!anatomy?.visible || !start || Math.hypot(e.clientX-start[0],e.clientY-start[1])>4) return;
+    if (!start || Math.hypot(e.clientX-start[0],e.clientY-start[1])>4) return;
     const rect = canvas.getBoundingClientRect();
     ray.setFromCamera({x:2*(e.clientX-rect.left)/rect.width-1,y:1-2*(e.clientY-rect.top)/rect.height},camera);
+    const contact = ray.intersectObjects(contacts.children)[0];
+    if (contact) {
+      onEdgePick(contact.object.userData.edge);
+      return;
+    }
+    if (!anatomy?.visible) return;
     const hit = ray.intersectObject(anatomy).find(({point}) => clip.distanceToPoint(point)>=0);
     if (!hit) return;
     const voxel = [(.5+hit.point.x/size.x)*nx-.5,(.5-hit.point.y/size.y)*ny-.5,(.5+hit.point.z/size.z)*nz-.5];
@@ -216,14 +231,31 @@ export function createRayVolume(host, {dimensions, spacing, rgba, labels, mesh, 
   set({});
   const observer = new ResizeObserver(resize);
   observer.observe(host);
-  return {set,reset, select(z,x,y) {
+  return {set,reset, showContacts(edges) {
+    contacts.clear();
+    for (const edge of edges) {
+      const dot = new THREE.Mesh(contactGeometry, contactMaterial);
+      dot.position.copy(worldAt(...edge.a)).lerp(worldAt(...edge.b), .5);
+      dot.renderOrder = 3;
+      dot.userData.edge = edge.id;
+      contacts.add(dot);
+    }
+    render();
+  },select(z,x,y,edge) {
     marker.position.copy(worldAt(x,y,z));
     marker.visible = true;
+    edgeLine.visible = Boolean(edge);
+    if (edge) {
+      edgeLine.geometry.setFromPoints([worldAt(...edge.a),worldAt(...edge.b)]);
+      edgeLine.geometry.computeBoundingSphere();
+    }
     render();
   },dispose() {
     observer.disconnect();
     controls.dispose();
-    for (const obj of [cube,marker,anatomy].filter(Boolean)) {
+    contactGeometry.dispose();
+    contactMaterial.dispose();
+    for (const obj of [cube,marker,edgeLine,anatomy].filter(Boolean)) {
       for (const material of [].concat(obj.material)) material.dispose();
       obj.geometry.dispose();
     }
